@@ -1,30 +1,4 @@
-package main;
 
-/*
- * QRWebcamScannerUI.java
- *
- * Single-class webcam QR scanner + preview that:
- *  - shows a live webcam preview (using sarxos webcam-capture WebcamPanel)
- *  - continuously attempts ZXing decoding on frames
- *  - when a QR is decoded and a numeric cat_id is parsed, opens CatProfileMenu(cat_id)
- *
- * Requirements (put jars in lib/ and on classpath):
- *  - com.google.zxing: core + javase (e.g. core-3.5.1.jar, javase-3.5.1.jar)
- *  - com.github.sarxos:webcam-capture (e.g. webcam-capture-0.3.12.jar) and its dependencies (jna etc.)
- *  - MySQL/MariaDB JDBC (mysql-connector-java)
- *  - Your project must compile main.stuff.dbconn and CatProfileMenu must be on the classpath
- *
- * Usage:
- *  - Run from IDE or command line. The UI will open and start scanning automatically.
- *  - When a valid cat_id is decoded the CatProfileMenu will open on the Event Dispatch Thread.
- *
- * Notes:
- *  - This class uses the project's db helper indirectly by opening CatProfileMenu, which
- *    uses main.stuff.dbconn.getConnection() per your project.
- *  - If you want the scanner integrated inside an existing menu, add the returned
- *    WebcamPanel (scanner.getWebcamPanel()) into your menu's layout instead of creating
- *    a top-level window.
- */
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -58,10 +32,6 @@ import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamPanel;
 import javax.swing.JOptionPane;
-
-/* No package declaration so it can instantiate CatProfileMenu in default package.
-   If your CatProfileMenu is in a package, update the new CatProfileMenu(catId)
-   call to use the fully-qualified name or move this class to the same package. */
 
 public class QRWebcamScannerUI extends JFrame {
 
