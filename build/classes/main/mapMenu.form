@@ -64,7 +64,7 @@
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="jPanelMain" max="32767" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
-                  <Component id="jLabel4" min="-2" max="-2" attributes="0"/>
+                  <Component id="Map" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
               </Group>
           </Group>
@@ -76,7 +76,7 @@
                   <Group type="103" groupAlignment="1" attributes="0">
                       <Group type="102" attributes="0">
                           <EmptySpace min="0" pref="0" max="32767" attributes="0"/>
-                          <Component id="jLabel4" min="-2" max="-2" attributes="0"/>
+                          <Component id="Map" min="-2" max="-2" attributes="0"/>
                       </Group>
                       <Component id="jPanelMain" max="32767" attributes="0"/>
                       <Component id="jPanelSidebar" max="32767" attributes="0"/>
@@ -127,7 +127,7 @@
             </DimensionLayout>
           </Layout>
         </Container>
-        <Component class="javax.swing.JLabel" name="jLabel4">
+        <Component class="javax.swing.JLabel" name="Map">
           <Properties>
             <Property name="icon" type="javax.swing.Icon" editor="org.netbeans.modules.form.editors2.IconEditor">
               <Image iconType="3" name="/main/images/Screenshot 2025-10-20 183258.png"/>

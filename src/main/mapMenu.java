@@ -1,13 +1,18 @@
 package main;
 
+import javax.swing.JButton;
 
+public class mapMenu extends javax.swing.JFrame {
 
-public class menu extends javax.swing.JFrame {
+    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(mapMenu.class.getName());
 
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(menu.class.getName());
-
-    public menu() {
+    public mapMenu() {
         initComponents();
+        test();
+    }
+
+    private void test() {
+        jPanelSidebar.add(new JButton("Option 1"));
     }
 
     @SuppressWarnings("unchecked")
@@ -18,7 +23,7 @@ public class menu extends javax.swing.JFrame {
         LayerPane = new javax.swing.JLayeredPane();
         jPanelMain = new javax.swing.JPanel();
         jPanelSidebar = new javax.swing.JPanel();
-        jLabel4 = new javax.swing.JLabel();
+        Map = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("UNP Cat-alog");
@@ -59,11 +64,11 @@ public class menu extends javax.swing.JFrame {
             .addGap(0, 0, Short.MAX_VALUE)
         );
 
-        jLabel4.setIcon(new javax.swing.ImageIcon(getClass().getResource("/main/images/Screenshot 2025-10-20 183258.png"))); // NOI18N
+        Map.setIcon(new javax.swing.ImageIcon(getClass().getResource("/main/images/Screenshot 2025-10-20 183258.png"))); // NOI18N
 
         LayerPane.setLayer(jPanelMain, javax.swing.JLayeredPane.DEFAULT_LAYER);
         LayerPane.setLayer(jPanelSidebar, javax.swing.JLayeredPane.DEFAULT_LAYER);
-        LayerPane.setLayer(jLabel4, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        LayerPane.setLayer(Map, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         javax.swing.GroupLayout LayerPaneLayout = new javax.swing.GroupLayout(LayerPane);
         LayerPane.setLayout(LayerPaneLayout);
@@ -75,7 +80,7 @@ public class menu extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanelMain, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel4)
+                .addComponent(Map)
                 .addContainerGap())
         );
         LayerPaneLayout.setVerticalGroup(
@@ -85,7 +90,7 @@ public class menu extends javax.swing.JFrame {
                 .addGroup(LayerPaneLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(LayerPaneLayout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(jLabel4))
+                        .addComponent(Map))
                     .addComponent(jPanelMain, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addComponent(jPanelSidebar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
@@ -115,12 +120,12 @@ public class menu extends javax.swing.JFrame {
     }//GEN-LAST:event_toggleSideActionPerformed
 
     public static void main(String args[]) {
-        java.awt.EventQueue.invokeLater(() -> new menu().setVisible(true));
+        java.awt.EventQueue.invokeLater(() -> new mapMenu().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLayeredPane LayerPane;
-    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel Map;
     private javax.swing.JPanel jPanelMain;
     private javax.swing.JPanel jPanelSidebar;
     private javax.swing.JButton toggleSide;
