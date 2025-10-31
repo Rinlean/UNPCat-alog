@@ -1,5 +1,3 @@
-
-
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -7,6 +5,7 @@ import java.awt.Font;
 import java.awt.image.BufferedImage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,6 +19,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
+import javax.swing.JOptionPane;
 
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.LuminanceSource;
@@ -31,14 +31,13 @@ import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 
 import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamPanel;
-import javax.swing.JOptionPane;
 
-public class QRWebcamScannerUI extends JFrame {
 
-    // regex to support plain "123" or URL ending with /cat/123 or /cats/123
-    private static final Pattern ID_EXTRACT = Pattern.compile(".*/(cat|cats)/?(\\d+)$|^(\\d+)$");
+public class eyqr extends JFrame {
 
-    // debounce interval in ms to avoid repeated opens
+    // only accepts "cat_id = 123" pattern
+    private static final Pattern CAT_ID_EXACT = Pattern.compile("(?i)^\\s*cat_id\\s*=\\s*(\\d+)\\s*$");
+
     private static final long DEBOUNCE_MS = 3000L;
 
     private final Webcam webcam;
@@ -47,31 +46,39 @@ public class QRWebcamScannerUI extends JFrame {
     private final JButton btnStop = new JButton("Stop");
     private final JButton btnClose = new JButton("Close");
 
-    private final ExecutorService decoderExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService decoderExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "qr-decoder");
+        t.setDaemon(true);
+        return t;
+    });
+
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private String lastDecoded = null;
     private long lastTimeMillis = 0;
 
-    public QRWebcamScannerUI() throws Exception {
-        super("QR Webcam Scanner");
-        // open default webcam
+    public eyqr() throws Exception {
+        super("QRtest");
         webcam = Webcam.getDefault();
         if (webcam == null) {
             throw new IllegalStateException("No webcam detected on this machine.");
         }
-        // pick a reasonable size (you can change)
+        //
         Dimension size = Webcam.getDefault().getViewSizes().length > 0 ? Webcam.getDefault().getViewSizes()[0] : new Dimension(640, 480);
         try {
             webcam.setViewSize(size);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
         webcamPanel = new WebcamPanel(webcam);
-        webcamPanel.setFPSDisplayed(true);
+        webcamPanel.setFPSDisplayed(false);
         webcamPanel.setMirrored(false);
-        webcamPanel.setPreferredSize(new Dimension(640, 480));
+        webcamPanel.setPreferredSize(new Dimension(1280, 720));
 
         initGui();
+
+        attachShutdownListener();
+
         startScanning();
     }
 
@@ -82,7 +89,6 @@ public class QRWebcamScannerUI extends JFrame {
         previewWrap.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 2));
         previewWrap.add(webcamPanel, BorderLayout.CENTER);
 
-        // status panel
         lblStatus.setFont(lblStatus.getFont().deriveFont(Font.BOLD, 14f));
         lblStatus.setForeground(Color.BLUE);
         JPanel statusPanel = new JPanel();
@@ -111,11 +117,11 @@ public class QRWebcamScannerUI extends JFrame {
         });
 
         btnClose.addActionListener(e -> {
-            stopScanning();
+            disposeScanner();
             dispose();
         });
 
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         pack();
         setLocationRelativeTo(null);
     }
@@ -129,7 +135,6 @@ public class QRWebcamScannerUI extends JFrame {
 
     private void stopScanning() {
         running.set(false);
-        // do not shutdown executor here — keep it for possible restart; could shutdown on dispose
     }
 
     private void decodeLoop() {
@@ -150,18 +155,16 @@ public class QRWebcamScannerUI extends JFrame {
                         handleDecodedText(text);
                     }
                 } catch (NotFoundException nf) {
-                    // no QR found in this frame - ignore
+                    // no QR in this frame - ignore
                 } catch (Throwable decodeErr) {
-                    // unexpected decode error; show status but continue
                     updateStatus("Decode error: " + decodeErr.getMessage());
                 }
-                Thread.sleep(150); // tune for CPU / responsiveness
+                Thread.sleep(150);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Throwable t) {
                 updateStatus("Camera error: " + t.getMessage());
-                // if camera fails, stop scanning
                 running.set(false);
                 break;
             }
@@ -170,10 +173,14 @@ public class QRWebcamScannerUI extends JFrame {
     }
 
     private void handleDecodedText(String decoded) {
-        if (decoded == null) return;
+        if (decoded == null) {
+            return;
+        }
         long now = System.currentTimeMillis();
         boolean isNew = !decoded.equals(lastDecoded) || (now - lastTimeMillis) > DEBOUNCE_MS;
-        if (!isNew) return;
+        if (!isNew) {
+            return;
+        }
         lastDecoded = decoded;
         lastTimeMillis = now;
 
@@ -181,76 +188,91 @@ public class QRWebcamScannerUI extends JFrame {
 
         Integer catId = extractCatId(decoded);
         if (catId != null) {
-            updateStatus("Cat ID: " + catId + " — opening profile...");
-            // open CatProfileMenu on EDT
+            updateStatus("Cat ID: " + catId + " — opening profile..."); System.out.println(decoded);
             SwingUtilities.invokeLater(() -> {
                 try {
-                    // instantiate your CatProfileMenu (must be on classpath)
                     CatProfileMenu profile = new CatProfileMenu(catId);
                     profile.setVisible(true);
                 } catch (Throwable t) {
-                    // if CatProfileMenu constructor throws, show message
                     updateStatus("Failed to open profile: " + t.getMessage());
                     t.printStackTrace();
                 }
             });
         } else {
             updateStatus("QR decoded but did not contain a numeric cat_id.");
+            System.out.println(decoded);
         }
     }
 
-    private Integer extractCatId(String text) {
-        if (text == null) return null;
-        text = text.trim();
-        Matcher m = ID_EXTRACT.matcher(text);
-        if (m.find()) {
-            String g1 = m.group(2);
-            String g2 = m.group(3);
-            String idStr = g1 != null ? g1 : g2;
-            if (idStr != null) {
-                try {
-                    return Integer.parseInt(idStr);
-                } catch (NumberFormatException ignored) {}
-            }
-        }
-        // fallback: entire text is integer
-        try {
-            return Integer.parseInt(text);
-        } catch (NumberFormatException ex) {
+    private static Integer extractCatId(String text) {
+        if (text == null) {
             return null;
         }
+        Matcher m = CAT_ID_EXACT.matcher(text);
+        if (m.matches()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private void updateStatus(String text) {
         SwingUtilities.invokeLater(() -> lblStatus.setText(text));
     }
 
-    /**
-     * If you want to embed the preview into an existing menu, call getWebcamPanel()
-     * and add it into your layout instead of creating a top-level window.
-     */
     public WebcamPanel getWebcamPanel() {
         return webcamPanel;
     }
 
-    /**
-     * Call when shutting down the app to release resources.
-     */
     public void disposeScanner() {
         stopScanning();
         try {
-            decoderExecutor.shutdownNow();
-        } catch (Throwable ignored) {}
+            if (webcamPanel != null) {
+                webcamPanel.stop();
+            }
+        } catch (Throwable ignored) {
+        }
+
         try {
-            if (webcam != null && webcam.isOpen()) webcam.close();
-        } catch (Throwable ignored) {}
+            decoderExecutor.shutdownNow();
+            if (!decoderExecutor.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+                decoderExecutor.shutdownNow();
+            }
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        } catch (Throwable ignored) {
+        }
+
+        try {
+            if (webcam != null && webcam.isOpen()) {
+                webcam.close();
+            }
+        } catch (Throwable ignored) {
+        }
     }
 
-    // quick launcher
+    private void attachShutdownListener() {
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                disposeScanner();
+            }
+
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent e) {
+                disposeScanner();
+            }
+        });
+    }
+
+    // test
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             try {
-                QRWebcamScannerUI scanner = new QRWebcamScannerUI();
+                eyqr scanner = new eyqr();
                 scanner.setVisible(true);
             } catch (NoClassDefFoundError ncd) {
                 String missing = ncd.getMessage();

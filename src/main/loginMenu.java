@@ -6,16 +6,16 @@ package main;
 
 /**
  *
- * @author Rin
+ * @author Lean
  */
-public class qrMenu extends javax.swing.JFrame {
+public class loginMenu extends javax.swing.JFrame {
     
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(qrMenu.class.getName());
+    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(loginMenu.class.getName());
 
     /**
-     * Creates new form qrMenu
+     * Creates new form loginMenu
      */
-    public qrMenu() {
+    public loginMenu() {
         initComponents();
     }
 
@@ -34,11 +34,11 @@ public class qrMenu extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 818, Short.MAX_VALUE)
+            .addGap(0, 400, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 573, Short.MAX_VALUE)
+            .addGap(0, 300, Short.MAX_VALUE)
         );
 
         pack();
@@ -66,7 +66,7 @@ public class qrMenu extends javax.swing.JFrame {
         //</editor-fold>
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new qrMenu().setVisible(true));
+        java.awt.EventQueue.invokeLater(() -> new loginMenu().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

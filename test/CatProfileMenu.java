@@ -1,5 +1,14 @@
-
-
+/*
+ * CatProfileMenu.java
+ *
+ * Simplified Swing test UI to display a cat profile based on the unpcat_alog schema.
+ * This version uses the project's dbconn helper (main.stuff.dbconn) ONLY for DB connections.
+ * The adoption panel has been moved to appear under the Behavior section to avoid being
+ * obscured by the Health tab content.
+ *
+ * Place this file in your project's src/ (adjust package if needed) and ensure
+ * src/main/stuff/dbconn.java is compiled and on the classpath.
+ */
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -44,7 +53,7 @@ public class CatProfileMenu extends JFrame {
         initUI();
         fetchAndPopulate();
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(800, 600);
+        setSize(1080, 1050);
         setLocationRelativeTo(null);
     }
 
@@ -54,20 +63,30 @@ public class CatProfileMenu extends JFrame {
         // Basic info panel
         JPanel basic = new JPanel(new GridLayout(0, 2, 6, 6));
         basic.setBorder(BorderFactory.createTitledBorder("Basic Info"));
-        basic.add(new JLabel("ID:")); basic.add(lblId);
-        basic.add(new JLabel("Name:")); basic.add(lblName);
-        basic.add(new JLabel("Gender:")); basic.add(lblGender);
-        basic.add(new JLabel("Breed:")); basic.add(lblBreed);
-        basic.add(new JLabel("Color:")); basic.add(lblColor);
-        basic.add(new JLabel("Area:")); basic.add(lblArea);
+        basic.add(new JLabel("ID:"));
+        basic.add(lblId);
+        basic.add(new JLabel("Name:"));
+        basic.add(lblName);
+        basic.add(new JLabel("Gender:"));
+        basic.add(lblGender);
+        basic.add(new JLabel("Breed:"));
+        basic.add(lblBreed);
+        basic.add(new JLabel("Color:"));
+        basic.add(lblColor);
+        basic.add(new JLabel("Area:"));
+        basic.add(lblArea);
 
-        // Adoption panel
+        // Adoption panel (moved to be shown under Behavior)
         JPanel adoption = new JPanel(new GridLayout(0, 2, 6, 6));
         adoption.setBorder(BorderFactory.createTitledBorder("Adoption (latest)"));
-        adoption.add(new JLabel("Status:")); adoption.add(lblAdoptionStatus);
-        adoption.add(new JLabel("When:")); adoption.add(lblAdoptionWhen);
-        adoption.add(new JLabel("Notes:")); adoption.add(lblAdoptionNotes);
-        adoption.add(new JLabel("Adopter:")); adoption.add(lblAdopter);
+        adoption.add(new JLabel("Status:"));
+        adoption.add(lblAdoptionStatus);
+        adoption.add(new JLabel("When:"));
+        adoption.add(lblAdoptionWhen);
+        adoption.add(new JLabel("Notes:"));
+        adoption.add(lblAdoptionNotes);
+        adoption.add(new JLabel("Adopter:"));
+        adoption.add(lblAdopter);
 
         // Behavior area
         taBehavior.setLineWrap(true);
@@ -91,15 +110,24 @@ public class CatProfileMenu extends JFrame {
         tabs.addTab("Incidents", incidentsScroll);
 
         // Compose left / right
-        JPanel left = new JPanel(new BorderLayout(6,6));
+        JPanel left = new JPanel(new BorderLayout(6, 6));
         left.add(basic, BorderLayout.NORTH);
-        left.add(adoption, BorderLayout.CENTER);
+        // left no longer contains adoption; adoption will be shown on the right under behavior
 
-        JPanel right = new JPanel(new BorderLayout(6,6));
-        right.add(behaviorScroll, BorderLayout.CENTER);
+        // Right column: Behavior on top, Adoption below it
+        JPanel right = new JPanel();
+        right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
+        behaviorScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+        adoption.setAlignmentX(Component.LEFT_ALIGNMENT);
+        right.add(behaviorScroll);
+        right.add(Box.createVerticalStrut(8));
+        right.add(adoption);
+
+        right.setPreferredSize(new Dimension(480, 400));
 
         JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left, right);
         split.setResizeWeight(0.4);
+        split.setOneTouchExpandable(true);
 
         add(split, BorderLayout.CENTER);
         add(tabs, BorderLayout.SOUTH);
@@ -112,12 +140,11 @@ public class CatProfileMenu extends JFrame {
     private void fetchAndPopulate() {
         new SwingWorker<Void, Void>() {
             Exception error;
+
             @Override
             protected Void doInBackground() {
                 try (Connection conn = getConnection()) {
                     populateBasic(conn);
-                    // maintain compatibility if older code calls populateLatestAdoption;
-                    // internally we use populateAdoption now
                     populateAdoption(conn);
                     populateBehavior(conn);
                     populateHealth(conn);
@@ -142,8 +169,8 @@ public class CatProfileMenu extends JFrame {
     }
 
     private void populateBasic(Connection conn) throws SQLException {
-        String sql = "SELECT c.cat_id, c.name, c.gender, c.breed, c.color, a.area_name " +
-                "FROM cat c LEFT JOIN area a ON c.area_id = a.area_id WHERE c.cat_id = ?";
+        String sql = "SELECT c.cat_id, c.name, c.gender, c.breed, c.color, a.area_name "
+                + "FROM cat c LEFT JOIN area a ON c.area_id = a.area_id WHERE c.cat_id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, catId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -175,9 +202,6 @@ public class CatProfileMenu extends JFrame {
         }
     }
 
-    /**
-     * New primary adoption loader (matches current code).
-     */
     private void populateAdoption(Connection conn) throws SQLException {
         String sql = "SELECT status, changed_at, notes, adopter_id FROM adoption_status WHERE cat_id = ? ORDER BY changed_at DESC LIMIT 1";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -213,21 +237,12 @@ public class CatProfileMenu extends JFrame {
         }
     }
 
-    /**
-     * Compatibility wrapper: some compiled callers (or older code) may call populateLatestAdoption.
-     * Provide the method to avoid NoSuchMethodError; delegate to populateAdoption.
-     */
-    public void populateLatestAdoption(Connection conn) throws SQLException {
-        populateAdoption(conn);
-    }
-
     private void populateAdopter(Connection conn, int adopterId) {
         String sql = "SELECT name, contact_info FROM adopter WHERE adopter_id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, adopterId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    // extract first, then update UI
                     final String name = rs.getString("name");
                     final String contact = rs.getString("contact_info");
                     SwingUtilities.invokeLater(() -> lblAdopter.setText(name + (contact != null ? " (" + contact + ")" : "")));
@@ -249,8 +264,12 @@ public class CatProfileMenu extends JFrame {
                 if (rs.next()) {
                     final String p = rs.getString("personality");
                     final String notes = rs.getString("notes");
-                    if (p != null && !p.isEmpty()) sb.append(p).append("\n");
-                    if (notes != null && !notes.isEmpty()) sb.append("Notes: ").append(notes).append("\n");
+                    if (p != null && !p.isEmpty()) {
+                        sb.append(p).append("\n");
+                    }
+                    if (notes != null && !notes.isEmpty()) {
+                        sb.append("Notes: ").append(notes).append("\n");
+                    }
                 } else {
                     sb.append("No behavior record.");
                 }
@@ -329,7 +348,9 @@ public class CatProfileMenu extends JFrame {
         int id = -1;
         if (args.length == 0) {
             String input = JOptionPane.showInputDialog(null, "Enter cat_id to view:", "Open Cat Profile", JOptionPane.QUESTION_MESSAGE);
-            if (input == null) return; // user cancelled
+            if (input == null) {
+                return; // user cancelled
+            }
             try {
                 id = Integer.parseInt(input.trim());
             } catch (NumberFormatException ex) {
@@ -346,7 +367,10 @@ public class CatProfileMenu extends JFrame {
         }
 
         final int catId = id;
-        try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception ignored) {}
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) {
+        }
         SwingUtilities.invokeLater(() -> {
             CatProfileMenu win = new CatProfileMenu(catId);
             win.setVisible(true);
