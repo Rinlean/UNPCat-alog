@@ -19,12 +19,11 @@ import main.stuff.imagerender;
 public class mapMenu extends javax.swing.JFrame {
 
     public mapMenu() {
-        
         initComponents();
         // replace content pane with imagerender background while preserving initComponents() children
         installBackground();
-        
     }
+   
 
     private void installBackground() {
         // change this to the path of your image
@@ -75,7 +74,6 @@ public class mapMenu extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("UNP Cat-alog");
         setMinimumSize(new java.awt.Dimension(1280, 720));
-        setPreferredSize(new java.awt.Dimension(640, 480));
         setResizable(false);
 
         jButton1.setText("jButton1");
@@ -85,19 +83,19 @@ public class mapMenu extends javax.swing.JFrame {
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap(471, Short.MAX_VALUE)
+                .addContainerGap(483, Short.MAX_VALUE)
                 .addComponent(jButton1)
-                .addGap(94, 94, 94))
+                .addGap(82, 82, 82))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap(354, Short.MAX_VALUE)
+                .addContainerGap(399, Short.MAX_VALUE)
                 .addComponent(jButton1)
-                .addGap(103, 103, 103))
+                .addGap(58, 58, 58))
         );
 
-        pack();
+        setLocation(new java.awt.Point(600, 300));
     }// </editor-fold>//GEN-END:initComponents
 
         public static void main(String args[]) {
