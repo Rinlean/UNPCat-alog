@@ -6,7 +6,7 @@ import java.sql.SQLException;
 
 public class dbconn {
 
-    private static final String URL = "jdbc:mysql://localhost:3306/unpcat_alog";
+    private static final String URL = "jdbc:mysql://192.168.100.12:3306/unpcat_alog";
     private static final String USER = "root";
     private static final String PASSWORD = ""; // XAMPP default is empty
 

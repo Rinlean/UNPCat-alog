@@ -1,4 +1,4 @@
-package main;
+package main.stuff;
 
 import java.awt.Dimension;
 import java.awt.image.BufferedImage;

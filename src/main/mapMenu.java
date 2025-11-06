@@ -27,7 +27,7 @@ public class mapMenu extends javax.swing.JFrame {
 
     private void installBackground() {
         // change this to the path of your image
-        String imagePath = "C:\\Users\\Lean\\Documents\\GitHub\\UNPCat-alog\\src\\main\\images\\waws.png";
+        String imagePath = "src\\main\\images\\waws.png";
 
         final imagerender bg = new imagerender(imagePath);
         final JLayeredPane layered = getLayeredPane();

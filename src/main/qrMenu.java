@@ -13,12 +13,20 @@ import javax.swing.SwingUtilities;
 
 import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamPanel;
+import java.awt.Font;
 import java.awt.Window;
+import java.util.Enumeration;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.UIDefaults;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.plaf.FontUIResource;
+import main.stuff.QRstuff;
 
 public class qrMenu extends javax.swing.JFrame {
 
@@ -29,9 +37,19 @@ public class qrMenu extends javax.swing.JFrame {
     private boolean darkMode = false;
     private String accountType = "";
 
+    // Single-thread cleanup executor (daemon) to run potentially blocking resource cleanup off the EDT.
+    private final ExecutorService cleanupExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "qr-preview-cleanup");
+        t.setDaemon(true);
+        return t;
+    });
+
+    private final AtomicBoolean windowListenerAdded = new AtomicBoolean(false);
+
+    private final AtomicBoolean started = new AtomicBoolean(false);
+
     public qrMenu() {
         initComponents();
-        startQRPrev();
         checkAccountType();
     }
 
@@ -106,12 +124,20 @@ public class qrMenu extends javax.swing.JFrame {
                 repaint();
 
                 // Start scanning (caller may choose to start later instead)
-                qrStuff.startScanning();
+                try {
+                    qrStuff.startScanning();
+                } catch (Throwable t) {
+                    logger.log(Level.FINE, "qrStuff.startScanning threw", t);
+                }
 
                 // Optional: register callbacks (console logging)
-                qrStuff.setDecodedCallback(text -> System.out.println("Decoded: " + text));
-                qrStuff.setCatIdCallback(id -> System.out.println("Cat ID: " + id));
-                qrStuff.setStatusCallback(status -> System.out.println("Status: " + status));
+                try {
+                    qrStuff.setDecodedCallback(text -> System.out.println("Decoded: " + text));
+                    qrStuff.setCatIdCallback(id -> System.out.println("Cat ID: " + id));
+                    qrStuff.setStatusCallback(status -> System.out.println("Status: " + status));
+                } catch (Throwable t) {
+                    // ignore if callbacks not present
+                }
 
             } catch (NoClassDefFoundError ncd) {
                 logger.severe("Missing native/library dependency: " + ncd.getMessage());
@@ -121,36 +147,86 @@ public class qrMenu extends javax.swing.JFrame {
         });
 
         // Ensure QRStuff is disposed when the window closes
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                disposeQRStuff();
-            }
+        if (windowListenerAdded.compareAndSet(false, true)) {
+            addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    // Quick UI work on EDT to detach heavy components so the window can close fast.
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            jPanel1.removeAll();
+                            jPanel1.revalidate();
+                            jPanel1.repaint();
+                        } catch (Throwable ignored) {
+                        }
+                    });
 
-            @Override
-            public void windowClosed(WindowEvent e) {
-                disposeQRStuff();
-            }
-        });
+                    // Perform heavy cleanup asynchronously so the EDT isn't blocked.
+                    submitCleanup();
+                }
+
+                @Override
+                public void windowClosed(WindowEvent e) {
+                    submitCleanup();
+                }
+            });
+        }
     }
 
-    private void disposeQRStuff() {
-        if (qrStuff != null) {
+    private void submitCleanup() {
+        cleanupExecutor.submit(() -> {
             try {
-                qrStuff.dispose();
-            } catch (Throwable ignored) {
-            } finally {
-                qrStuff = null;
+                if (qrStuff != null) {
+                    try {
+                        qrStuff.stopScanning();
+                    } catch (Throwable t) {
+                        logger.log(Level.FINE, "stopScanning threw", t);
+                    }
+                }
+            } catch (Throwable t) {
+                logger.log(Level.FINE, "Failed while attempting to stop scanning", t);
             }
-        }
-        if (previewPanel != null) {
+
             try {
-                previewPanel.stop();
-            } catch (Throwable ignored) {
-            } finally {
-                previewPanel = null;
+                if (previewPanel != null) {
+                    try {
+                        previewPanel.stop();
+                    } catch (Throwable t) {
+                        logger.log(Level.FINE, "previewPanel.stop threw", t);
+                    } finally {
+                        previewPanel = null;
+                    }
+                }
+            } catch (Throwable t) {
+                logger.log(Level.FINE, "Failed while stopping previewPanel", t);
             }
-        }
+
+            try {
+                if (qrStuff != null) {
+                    try {
+                        qrStuff.dispose();
+                    } catch (Throwable t) {
+                        logger.log(Level.FINE, "qrStuff.dispose threw", t);
+                    } finally {
+                        qrStuff = null;
+                    }
+                }
+            } catch (Throwable t) {
+                logger.log(Level.FINE, "Failed while disposing qrStuff", t);
+            }
+
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    startButton.setEnabled(true);
+                    stopButton.setEnabled(false);
+                    started.set(false);
+                } catch (Throwable ignored) {
+                }
+            });
+
+            // Optionally shutdown the executor if you never plan to reopen the preview during the JVM lifetime.
+            // cleanupExecutor.shutdown(); // uncomment if appropriate
+        });
     }
 
     private Dimension findClosestSize(Webcam camera, Dimension target) {
@@ -187,6 +263,25 @@ public class qrMenu extends javax.swing.JFrame {
         }
     }
 
+    public static void setGlobalFont(Font font) {
+        FontUIResource fontRes = new FontUIResource(font);
+
+        // Preferred: replace only FontUIResource entries in UIDefaults
+        UIDefaults defaults = UIManager.getLookAndFeelDefaults();
+        Enumeration<Object> keys = defaults.keys();
+        while (keys.hasMoreElements()) {
+            Object key = keys.nextElement();
+            Object value = defaults.get(key);
+            if (value instanceof FontUIResource) {
+                UIManager.put(key, fontRes);
+            }
+        }
+
+        // Some LaFs use "defaultFont" or "Component.font" keys; set them too
+        UIManager.put("defaultFont", fontRes);
+        UIManager.put("Component.font", fontRes);
+    }
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -197,12 +292,15 @@ public class qrMenu extends javax.swing.JFrame {
         MapBtn = new javax.swing.JButton();
         edcatinfoBtn = new javax.swing.JButton();
         DarkToggBtn = new javax.swing.JToggleButton();
+        startButton = new javax.swing.JButton();
+        stopButton = new javax.swing.JButton();
+        jButton1 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("UNP Cat-alog");
         setMaximumSize(new java.awt.Dimension(1280, 720));
         setMinimumSize(new java.awt.Dimension(1280, 720));
-        setPreferredSize(new java.awt.Dimension(1280, 720));
+        setPreferredSize(new java.awt.Dimension(1280, 740));
         setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -212,14 +310,14 @@ public class qrMenu extends javax.swing.JFrame {
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 688, Short.MAX_VALUE)
+            .addGap(0, 858, Short.MAX_VALUE)
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGap(0, 618, Short.MAX_VALUE)
         );
 
-        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(370, 40, 690, 620));
+        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(370, 20, 860, 620));
 
         ProfBtn.setText("Profile");
         ProfBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -232,7 +330,7 @@ public class qrMenu extends javax.swing.JFrame {
 
         ADeditCtakersBtn.setText("Edit Caretakers");
         ADeditCtakersBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        getContentPane().add(ADeditCtakersBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 210, 270, 40));
+        getContentPane().add(ADeditCtakersBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 260, 270, 40));
 
         MapBtn.setText("Map");
         MapBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -241,7 +339,7 @@ public class qrMenu extends javax.swing.JFrame {
                 MapBtnActionPerformed(evt);
             }
         });
-        getContentPane().add(MapBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 280, 270, 40));
+        getContentPane().add(MapBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 330, 270, 40));
 
         edcatinfoBtn.setText("Edit Cat Profile");
         edcatinfoBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -250,7 +348,7 @@ public class qrMenu extends javax.swing.JFrame {
                 edcatinfoBtnActionPerformed(evt);
             }
         });
-        getContentPane().add(edcatinfoBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 350, 270, 40));
+        getContentPane().add(edcatinfoBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 400, 270, 40));
 
         DarkToggBtn.setText("Dark Mode");
         DarkToggBtn.addActionListener(new java.awt.event.ActionListener() {
@@ -259,6 +357,33 @@ public class qrMenu extends javax.swing.JFrame {
             }
         });
         getContentPane().add(DarkToggBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 640, -1, -1));
+
+        startButton.setText("Start");
+        startButton.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        startButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                startButtonActionPerformed(evt);
+            }
+        });
+        getContentPane().add(startButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(670, 660, -1, -1));
+
+        stopButton.setText("Stop");
+        stopButton.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        stopButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                stopButtonActionPerformed(evt);
+            }
+        });
+        getContentPane().add(stopButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(840, 660, -1, -1));
+        stopButton.setEnabled(false);
+
+        jButton1.setText("jButton1");
+        jButton1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButton1ActionPerformed(evt);
+            }
+        });
+        getContentPane().add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(180, 560, -1, -1));
 
         pack();
         setLocationRelativeTo(null);
@@ -311,11 +436,50 @@ public class qrMenu extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_edcatinfoBtnActionPerformed
 
+    private void startButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startButtonActionPerformed
+        // Only allow start action if not already started
+        if (started.compareAndSet(false, true)) {
+            // Update button states immediately so user sees feedback.
+            SwingUtilities.invokeLater(() -> {
+                startButton.setEnabled(false);
+                stopButton.setEnabled(true);
+            });
+            // Start the preview/scanner
+            startQRPrev();
+        }
+    }//GEN-LAST:event_startButtonActionPerformed
+
+    private void stopButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopButtonActionPerformed
+        if (started.compareAndSet(true, false)) {
+            // Quick UI detach so window can close fast/stop rendering preview
+            SwingUtilities.invokeLater(() -> {
+                startButton.setEnabled(true);
+                stopButton.setEnabled(false);
+                try {
+                    jPanel1.removeAll();
+                    jPanel1.revalidate();
+                    jPanel1.repaint();
+                } catch (Throwable ignored) {
+                }
+            });
+
+            // Perform heavy cleanup asynchronously
+            submitCleanup();
+        }
+    }//GEN-LAST:event_stopButtonActionPerformed
+
+    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        CatProfileMenu catProf = new CatProfileMenu(2);
+        catProf.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        catProf.setVisible(true);
+    }//GEN-LAST:event_jButton1ActionPerformed
+
     public static void main(String[] args) {
         try {
             // Set the desired FlatLaf look and feel
             UIManager.setLookAndFeel(new FlatLightLaf());
 
+            setGlobalFont(new Font("Arial", Font.PLAIN, 13));
             java.awt.EventQueue.invokeLater(() -> {
                 try {
                     new qrMenu().setVisible(true);
@@ -335,6 +499,9 @@ public class qrMenu extends javax.swing.JFrame {
     private javax.swing.JButton MapBtn;
     private javax.swing.JButton ProfBtn;
     private javax.swing.JButton edcatinfoBtn;
+    private javax.swing.JButton jButton1;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JButton startButton;
+    private javax.swing.JButton stopButton;
     // End of variables declaration//GEN-END:variables
 }
