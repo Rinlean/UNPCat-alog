@@ -1,3 +1,4 @@
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -31,7 +32,6 @@ import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 
 import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamPanel;
-
 
 public class eyqr extends JFrame {
 
@@ -188,7 +188,8 @@ public class eyqr extends JFrame {
 
         Integer catId = extractCatId(decoded);
         if (catId != null) {
-            updateStatus("Cat ID: " + catId + " — opening profile..."); System.out.println(decoded);
+            updateStatus("Cat ID: " + catId + " — opening profile...");
+            System.out.println(decoded);
             SwingUtilities.invokeLater(() -> {
                 try {
                     CatProfileMenu profile = new CatProfileMenu(catId);

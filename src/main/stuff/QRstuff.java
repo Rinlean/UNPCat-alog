@@ -20,12 +20,14 @@ import com.google.zxing.NotFoundException;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
+import javax.swing.SwingUtilities;
+import main.catProfileMenu;
 
 /**
- * QRStuff: Non-UI QR scanner that provides a WebcamPanel for embedding into a Swing container.
- * - Keeps decoding logic separate from UI.
- * - Caller (qrMenu) is responsible for adding the returned WebcamPanel into its jPanel and
- *   for calling dispose() when the window closes.
+ * QRStuff: Non-UI QR scanner that provides a WebcamPanel for embedding into a
+ * Swing container. - Keeps decoding logic separate from UI. - Caller (qrMenu)
+ * is responsible for adding the returned WebcamPanel into its jPanel and for
+ * calling dispose() when the window closes.
  */
 public class QRstuff {
 
@@ -53,8 +55,9 @@ public class QRstuff {
     private Consumer<String> statusCallback;
 
     /**
-     * Create QRStuff and use the default webcam.
-     * Does not start scanning automatically.
+     * Create QRStuff and use the default webcam. Does not start scanning
+     * automatically.
+     *
      * @throws IllegalStateException when no webcam is available
      */
     public QRstuff() {
@@ -62,8 +65,9 @@ public class QRstuff {
     }
 
     /**
-     * Create QRStuff using an existing Webcam instance (useful when caller wants to share camera).
-     * Does not start scanning automatically.
+     * Create QRStuff using an existing Webcam instance (useful when caller
+     * wants to share camera). Does not start scanning automatically.
+     *
      * @param webcam non-null Webcam instance
      */
     public QRstuff(Webcam webcam) {
@@ -84,9 +88,10 @@ public class QRstuff {
     }
 
     /**
-     * Returns a configured WebcamPanel that you can add to your Swing layout (for example jPanel1).
-     * The panel will be created lazily and returned. The panel is also automatically started here
-     * so it begins previewing immediately; if you prefer to manage starting yourself, stop() the panel
+     * Returns a configured WebcamPanel that you can add to your Swing layout
+     * (for example jPanel1). The panel will be created lazily and returned. The
+     * panel is also automatically started here so it begins previewing
+     * immediately; if you prefer to manage starting yourself, stop() the panel
      * before calling start() manually.
      */
     public synchronized WebcamPanel getWebcamPanel() {
@@ -172,15 +177,24 @@ public class QRstuff {
 
         notifyStatus("Decoded: " + decoded);
         if (decodedCallback != null) {
-            try { decodedCallback.accept(decoded); } catch (Throwable ignored) {}
+            try {
+                decodedCallback.accept(decoded);
+            } catch (Throwable ignored) {
+            }
         }
 
         Integer catId = extractCatId(decoded);
         if (catId != null) {
-            notifyStatus("Cat ID: " + catId);
-            if (catIdCallback != null) {
-                try { catIdCallback.accept(catId); } catch (Throwable ignored) {}
-            }
+            System.out.println(decoded);
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    catProfileMenu profile = new catProfileMenu(catId);
+                    profile.setVisible(true);
+                } catch (Throwable t) {
+                }
+            });
+        } else {
+            System.out.println(decoded);
         }
     }
 
@@ -200,7 +214,6 @@ public class QRstuff {
     }
 
     // Callbacks registration
-
     public void setDecodedCallback(Consumer<String> cb) {
         this.decodedCallback = cb;
     }
@@ -215,13 +228,16 @@ public class QRstuff {
 
     private void notifyStatus(String s) {
         if (statusCallback != null) {
-            try { statusCallback.accept(s); } catch (Throwable ignored) {}
+            try {
+                statusCallback.accept(s);
+            } catch (Throwable ignored) {
+            }
         }
     }
 
     /**
-     * Stop scanning, stop preview panel thread, shutdown decoder thread and close the webcam.
-     * Safe to call multiple times.
+     * Stop scanning, stop preview panel thread, shutdown decoder thread and
+     * close the webcam. Safe to call multiple times.
      */
     public void dispose() {
         stopScanning();

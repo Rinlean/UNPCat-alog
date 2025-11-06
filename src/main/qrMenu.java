@@ -36,6 +36,7 @@ public class qrMenu extends javax.swing.JFrame {
     private WebcamPanel previewPanel;
     private boolean darkMode = false;
     private String accountType = "";
+    private String accountId = "";
 
     // Single-thread cleanup executor (daemon) to run potentially blocking resource cleanup off the EDT.
     private final ExecutorService cleanupExecutor = Executors.newSingleThreadExecutor(r -> {
@@ -48,7 +49,9 @@ public class qrMenu extends javax.swing.JFrame {
 
     private final AtomicBoolean started = new AtomicBoolean(false);
 
-    public qrMenu() {
+    public qrMenu(String accId, String accType) {
+        this.accountId = accId;
+        this.accountType = accType;
         initComponents();
         checkAccountType();
     }
@@ -66,14 +69,14 @@ public class qrMenu extends javax.swing.JFrame {
                 previewPanel.setFillArea(true);
 
                 // Put the preview into the existing jPanel1
-                jPanel1.removeAll();
-                jPanel1.setLayout(new BorderLayout());
-                jPanel1.add(previewPanel, BorderLayout.CENTER);
+                webcamPanel.removeAll();
+                webcamPanel.setLayout(new BorderLayout());
+                webcamPanel.add(previewPanel, BorderLayout.CENTER);
 
                 // Ensure preview initially matches panel size (if already laid out)
-                Dimension initial = jPanel1.getSize();
+                Dimension initial = webcamPanel.getSize();
                 if (initial == null || initial.width == 0 || initial.height == 0) {
-                    initial = jPanel1.getPreferredSize();
+                    initial = webcamPanel.getPreferredSize();
                     if (initial == null || initial.width == 0 || initial.height == 0) {
                         initial = new Dimension(640, 480);
                     }
@@ -83,10 +86,10 @@ public class qrMenu extends javax.swing.JFrame {
                 previewPanel.revalidate();
 
                 // Listen for jPanel1 resize events and adapt preview + webcam
-                jPanel1.addComponentListener(new ComponentAdapter() {
+                webcamPanel.addComponentListener(new ComponentAdapter() {
                     @Override
                     public void componentResized(ComponentEvent e) {
-                        Dimension newSize = jPanel1.getSize();
+                        Dimension newSize = webcamPanel.getSize();
                         if (newSize == null) {
                             return;
                         }
@@ -154,9 +157,9 @@ public class qrMenu extends javax.swing.JFrame {
                     // Quick UI work on EDT to detach heavy components so the window can close fast.
                     SwingUtilities.invokeLater(() -> {
                         try {
-                            jPanel1.removeAll();
-                            jPanel1.revalidate();
-                            jPanel1.repaint();
+                            webcamPanel.removeAll();
+                            webcamPanel.revalidate();
+                            webcamPanel.repaint();
                         } catch (Throwable ignored) {
                         }
                     });
@@ -286,7 +289,7 @@ public class qrMenu extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jPanel1 = new javax.swing.JPanel();
+        webcamPanel = new javax.swing.JPanel();
         ProfBtn = new javax.swing.JButton();
         ADeditCtakersBtn = new javax.swing.JButton();
         MapBtn = new javax.swing.JButton();
@@ -294,7 +297,7 @@ public class qrMenu extends javax.swing.JFrame {
         DarkToggBtn = new javax.swing.JToggleButton();
         startButton = new javax.swing.JButton();
         stopButton = new javax.swing.JButton();
-        jButton1 = new javax.swing.JButton();
+        testcatprofilemenu = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("UNP Cat-alog");
@@ -304,20 +307,20 @@ public class qrMenu extends javax.swing.JFrame {
         setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
-        jPanel1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+        webcamPanel.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
 
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        javax.swing.GroupLayout webcamPanelLayout = new javax.swing.GroupLayout(webcamPanel);
+        webcamPanel.setLayout(webcamPanelLayout);
+        webcamPanelLayout.setHorizontalGroup(
+            webcamPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGap(0, 858, Short.MAX_VALUE)
         );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        webcamPanelLayout.setVerticalGroup(
+            webcamPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGap(0, 618, Short.MAX_VALUE)
         );
 
-        getContentPane().add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(370, 20, 860, 620));
+        getContentPane().add(webcamPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(370, 20, 860, 620));
 
         ProfBtn.setText("Profile");
         ProfBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -377,13 +380,13 @@ public class qrMenu extends javax.swing.JFrame {
         getContentPane().add(stopButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(840, 660, -1, -1));
         stopButton.setEnabled(false);
 
-        jButton1.setText("jButton1");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        testcatprofilemenu.setText("testcatprof");
+        testcatprofilemenu.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                testcatprofilemenuActionPerformed(evt);
             }
         });
-        getContentPane().add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(180, 560, -1, -1));
+        getContentPane().add(testcatprofilemenu, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 520, -1, -1));
 
         pack();
         setLocationRelativeTo(null);
@@ -393,11 +396,24 @@ public class qrMenu extends javax.swing.JFrame {
         mapMenu map = new mapMenu();
         map.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         map.setVisible(true);
-        MapBtn.setEnabled(true);
+        MapBtn.setEnabled(false);
+
+        map.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent e) {
+                javax.swing.SwingUtilities.invokeLater(() -> MapBtn.setEnabled(true));
+            }
+        });
     }//GEN-LAST:event_MapBtnActionPerformed
 
     private void ProfBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ProfBtnActionPerformed
-//        if (account_id )
+        if (!accountId.equals("")) {
+            ProfileMenu profMenu = new ProfileMenu(Integer.parseInt(accountId));
+            profMenu.setVisible(true);
+        } else {
+            loginMenu logMenu = new loginMenu();
+            logMenu.setVisible(true);
+        }
     }//GEN-LAST:event_ProfBtnActionPerformed
 
     private void DarkToggBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DarkToggBtnActionPerformed
@@ -433,7 +449,13 @@ public class qrMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_DarkToggBtnActionPerformed
 
     private void edcatinfoBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_edcatinfoBtnActionPerformed
-        // TODO add your handling code here:
+    // open a single profile window and pass its reference to the edit window
+    catProfileMenu catProf = new catProfileMenu(0);
+    catProf.setVisible(true);
+
+    // pass the profile window so editCatMenu will update (repaint) the existing profile window
+    editCatMenu edMenu = new editCatMenu(Integer.parseInt(accountId), catProf);
+    edMenu.setVisible(true);
     }//GEN-LAST:event_edcatinfoBtnActionPerformed
 
     private void startButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startButtonActionPerformed
@@ -456,9 +478,9 @@ public class qrMenu extends javax.swing.JFrame {
                 startButton.setEnabled(true);
                 stopButton.setEnabled(false);
                 try {
-                    jPanel1.removeAll();
-                    jPanel1.revalidate();
-                    jPanel1.repaint();
+                    webcamPanel.removeAll();
+                    webcamPanel.revalidate();
+                    webcamPanel.repaint();
                 } catch (Throwable ignored) {
                 }
             });
@@ -468,11 +490,11 @@ public class qrMenu extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_stopButtonActionPerformed
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        CatProfileMenu catProf = new CatProfileMenu(2);
+    private void testcatprofilemenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_testcatprofilemenuActionPerformed
+        catProfileMenu catProf = new catProfileMenu(2);
         catProf.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         catProf.setVisible(true);
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }//GEN-LAST:event_testcatprofilemenuActionPerformed
 
     public static void main(String[] args) {
         try {
@@ -482,7 +504,7 @@ public class qrMenu extends javax.swing.JFrame {
             setGlobalFont(new Font("Arial", Font.PLAIN, 13));
             java.awt.EventQueue.invokeLater(() -> {
                 try {
-                    new qrMenu().setVisible(true);
+                    new qrMenu("1", "caretaker").setVisible(true);
                 } catch (Throwable t) {
                     logger.log(java.util.logging.Level.SEVERE, "Failed to launch qrMenu", t);
                 }
@@ -499,9 +521,9 @@ public class qrMenu extends javax.swing.JFrame {
     private javax.swing.JButton MapBtn;
     private javax.swing.JButton ProfBtn;
     private javax.swing.JButton edcatinfoBtn;
-    private javax.swing.JButton jButton1;
-    private javax.swing.JPanel jPanel1;
     private javax.swing.JButton startButton;
     private javax.swing.JButton stopButton;
+    private javax.swing.JButton testcatprofilemenu;
+    private javax.swing.JPanel webcamPanel;
     // End of variables declaration//GEN-END:variables
 }

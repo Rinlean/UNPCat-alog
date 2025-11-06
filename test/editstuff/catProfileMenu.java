@@ -1,5 +1,6 @@
-package main;
+package editstuff;
 
+import main.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.sql.Connection;
