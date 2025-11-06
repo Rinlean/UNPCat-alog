@@ -1,73 +1,16 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package main;
-
-import main.stuff.CatInfoGetter;
-import main.stuff.CatInfoGetter.BasicInfo;
-import main.stuff.CatInfoGetter.AdoptionInfo;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-/**
- *
- * @author Lean
- */
+
 public class CatProfileMenu extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(CatProfileMenu.class.getName());
 
-    /**
-     * Creates new form CatProfileMenu
-     */
     public CatProfileMenu() {
         initComponents();
-    }
-
-    public void loadCat(int catId) {
-        // show a simple loading placeholder in the table
-        SwingUtilities.invokeLater(() -> {
-            jTable1.setModel(new DefaultTableModel(new Object[]{"Date", "Conditions"}, 0));
-        });
-
-        SwingWorker<DefaultTableModel, Void> worker = new SwingWorker<DefaultTableModel, Void>() {
-            private Exception error = null;
-
-            @Override
-            protected DefaultTableModel doInBackground() {
-                try {
-                    // fetchHealthModel opens and closes its own connection
-                    return CatInfoGetter.fetchHealthModel(catId);
-                } catch (Exception ex) {
-                    error = ex;
-                    logger.log(Level.SEVERE, "Error fetching health model for cat " + catId, ex);
-                    // build an error model to show in the table
-                    DefaultTableModel err = new DefaultTableModel(new Object[]{"Error"}, 0);
-                    err.addRow(new Object[]{ex.getMessage()});
-                    return err;
-                }
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    DefaultTableModel model = get();
-                    // Apply the model to the table on the EDT
-                    jTable1.setModel(model);
-                    jTable1.setAutoCreateRowSorter(true);
-                } catch (Exception ex) {
-                    logger.log(Level.SEVERE, "Unexpected error updating table for cat " + catId, ex);
-                    DefaultTableModel err = new DefaultTableModel(new Object[]{"Error"}, 0);
-                    err.addRow(new Object[]{ex.getMessage()});
-                    jTable1.setModel(err);
-                }
-            }
-        };
-
-        worker.execute();
     }
 
     /**
@@ -79,8 +22,7 @@ public class CatProfileMenu extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jTable1 = new javax.swing.JTable();
+        basicInfoPnl = new javax.swing.JPanel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setMaximumSize(new java.awt.Dimension(720, 720));
@@ -88,18 +30,7 @@ public class CatProfileMenu extends javax.swing.JFrame {
         setPreferredSize(new java.awt.Dimension(720, 720));
         setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-
-            },
-            new String [] {
-
-            }
-        ));
-        jScrollPane1.setViewportView(jTable1);
-
-        getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 30, 210, 220));
+        getContentPane().add(basicInfoPnl, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 30, 260, 270));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -107,40 +38,9 @@ public class CatProfileMenu extends javax.swing.JFrame {
     /**
      * @param args the command line arguments
      */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(Level.SEVERE, null, ex);
-        }
 
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> {
-            CatProfileMenu frame = new CatProfileMenu();
-            frame.setVisible(true);
-
-            // Example: prompt for a cat id and load it (keeps classes separate)
-            String idStr = JOptionPane.showInputDialog(frame, "Enter cat id to load (or Cancel):", "1");
-            if (idStr != null) {
-                try {
-                    int id = Integer.parseInt(idStr.trim());
-                    // call the new method that uses CatInfoGetter
-                    frame.loadCat(id);
-                } catch (NumberFormatException nfe) {
-                    JOptionPane.showMessageDialog(frame, "Invalid id");
-                }
-            }
-        });
-    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable jTable1;
+    private javax.swing.JPanel basicInfoPnl;
     // End of variables declaration//GEN-END:variables
 }

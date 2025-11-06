@@ -1,7 +1,6 @@
 package main;
 
 import com.formdev.flatlaf.FlatDarkLaf;
-import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -28,11 +27,12 @@ public class qrMenu extends javax.swing.JFrame {
     private QRstuff qrStuff;
     private WebcamPanel previewPanel;
     private boolean darkMode = false;
+    private String accountType = "";
 
     public qrMenu() {
         initComponents();
         startQRPrev();
-        edcatinfoBtn.setVisible(false);
+        checkAccountType();
     }
 
     private void startQRPrev() {
@@ -174,6 +174,19 @@ public class qrMenu extends javax.swing.JFrame {
         return best;
     }
 
+    private void checkAccountType() {
+        if (accountType.equals("admin")) {
+            edcatinfoBtn.setVisible(true);
+            ADeditCtakersBtn.setVisible(true);
+        } else if (accountType.equals("caretaker")) {
+            edcatinfoBtn.setVisible(true);
+            ADeditCtakersBtn.setVisible(false);
+        } else {
+            edcatinfoBtn.setVisible(false);
+            ADeditCtakersBtn.setVisible(false);
+        }
+    }
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -219,7 +232,7 @@ public class qrMenu extends javax.swing.JFrame {
 
         ADeditCtakersBtn.setText("Edit Caretakers");
         ADeditCtakersBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        getContentPane().add(ADeditCtakersBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 280, 180, 40));
+        getContentPane().add(ADeditCtakersBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 210, 270, 40));
 
         MapBtn.setText("Map");
         MapBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -228,11 +241,16 @@ public class qrMenu extends javax.swing.JFrame {
                 MapBtnActionPerformed(evt);
             }
         });
-        getContentPane().add(MapBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 210, 180, 40));
+        getContentPane().add(MapBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 280, 270, 40));
 
         edcatinfoBtn.setText("Edit Cat Profile");
         edcatinfoBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        getContentPane().add(edcatinfoBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(130, 350, 180, 40));
+        edcatinfoBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                edcatinfoBtnActionPerformed(evt);
+            }
+        });
+        getContentPane().add(edcatinfoBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 350, 270, 40));
 
         DarkToggBtn.setText("Dark Mode");
         DarkToggBtn.addActionListener(new java.awt.event.ActionListener() {
@@ -254,7 +272,7 @@ public class qrMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_MapBtnActionPerformed
 
     private void ProfBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ProfBtnActionPerformed
-        // TODO add your handling code here:
+//        if (account_id )
     }//GEN-LAST:event_ProfBtnActionPerformed
 
     private void DarkToggBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DarkToggBtnActionPerformed
@@ -288,6 +306,10 @@ public class qrMenu extends javax.swing.JFrame {
                     JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_DarkToggBtnActionPerformed
+
+    private void edcatinfoBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_edcatinfoBtnActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_edcatinfoBtnActionPerformed
 
     public static void main(String[] args) {
         try {
