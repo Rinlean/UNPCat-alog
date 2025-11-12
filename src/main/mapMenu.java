@@ -27,7 +27,7 @@ public class mapMenu extends javax.swing.JFrame {
 
     private void installBackground() {
         // change this to the path of your image
-        String imagePath = "src\\main\\images\\waws.png";
+        String imagePath = "src\\main\\images\\map.png";
 
         final imagerender bg = new imagerender(imagePath);
         final JLayeredPane layered = getLayeredPane();
@@ -69,30 +69,30 @@ public class mapMenu extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jButton1 = new javax.swing.JButton();
+        jComboBox1 = new javax.swing.JComboBox<>();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("UNP Cat-alog");
         setMinimumSize(new java.awt.Dimension(1280, 720));
         setResizable(false);
 
-        jButton1.setText("jButton1");
+        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap(483, Short.MAX_VALUE)
-                .addComponent(jButton1)
-                .addGap(82, 82, 82))
+                .addContainerGap(631, Short.MAX_VALUE)
+                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(577, 577, 577))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addContainerGap(399, Short.MAX_VALUE)
-                .addComponent(jButton1)
-                .addGap(58, 58, 58))
+            .addGroup(layout.createSequentialGroup()
+                .addGap(169, 169, 169)
+                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(609, Short.MAX_VALUE))
         );
 
         setLocation(new java.awt.Point(600, 300));
@@ -115,6 +115,6 @@ public class mapMenu extends javax.swing.JFrame {
         }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
+    private javax.swing.JComboBox<String> jComboBox1;
     // End of variables declaration//GEN-END:variables
 }
