@@ -2,16 +2,11 @@ package main;
 
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.logging.Level;
 import javax.swing.SwingUtilities;
 
-import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamPanel;
 import java.awt.Font;
 import java.awt.Window;
@@ -19,6 +14,7 @@ import java.sql.SQLException;
 import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -27,6 +23,7 @@ import javax.swing.UIDefaults;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.plaf.FontUIResource;
+import javax.swing.SwingWorker;
 import main.stuff.QRstuff;
 import main.stuff.dbconn;
 
@@ -35,156 +32,141 @@ public class qrMenu extends javax.swing.JFrame {
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(qrMenu.class.getName());
 
     private QRstuff qrStuff;
-    private WebcamPanel previewPanel;
     private boolean darkMode = false;
-    private String accountType = "";
-    private String accountId = "";
+    private Integer accountId = null;
 
-    // Single-thread cleanup executor (daemon) to run potentially blocking resource cleanup off the EDT.
-    private final ExecutorService cleanupExecutor = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "qr-preview-cleanup");
+    private enum Role {
+        ADMIN, CARETAKER, GUEST
+    }
+    private Role accountRole = Role.GUEST;
+
+    private final ExecutorService backgroundExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "qr-background");
         t.setDaemon(true);
         return t;
     });
 
     private final AtomicBoolean windowListenerAdded = new AtomicBoolean(false);
-
     private final AtomicBoolean started = new AtomicBoolean(false);
 
     public qrMenu(String accId, String accType) {
-        this.accountId = accId;
-        this.accountType = accType;
         initComponents();
-        checkAccountType();
+        applyLogin(accId, accType);
     }
 
-    public void applyLogin(String accId, String accType) {
-        this.accountId = accId == null ? "" : accId;
-        this.accountType = accType == null ? "" : accType;
-        // Update UI on EDT
-        SwingUtilities.invokeLater(() -> {
-            checkAccountType();
-            // Optionally update title / status to reflect logged-in user
-            if (!this.accountId.isEmpty()) {
-                try {
-                    setTitle("UNP Cat-alog - User: " + dbconn.getAccountNameById(accountId));
-                } catch (SQLException ex) {
-                    System.getLogger(qrMenu.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-                }
-            } else if (this.accountId.isEmpty()){
-                setTitle("UNP Cat-alog");
-            }
-            // bring window to front so user sees the refreshed state
+    public final void applyLogin(String accIdStr, String accTypeStr) {
+        Integer accId = null;
+        if (accIdStr != null && !accIdStr.isEmpty()) {
             try {
-                if (!isVisible()) {
-                    setVisible(true);
-                }
-                toFront();
-                requestFocus();
-            } catch (Throwable ignored) {
+                accId = Integer.parseInt(accIdStr);
+            } catch (NumberFormatException ex) {
+                logger.log(Level.FINE, "Invalid accId string: {0}", accIdStr);
             }
-        });
+        }
+
+        Role role = Role.GUEST;
+        if ("admin".equalsIgnoreCase(accTypeStr)) {
+            role = Role.ADMIN;
+        } else if ("caretaker".equalsIgnoreCase(accTypeStr)) {
+            role = Role.CARETAKER;
+        }
+
+        this.accountId = accId;
+        this.accountRole = role;
+
+        // Update UI elements
+        SwingUtilities.invokeLater(() -> updateMenusForRole());
+
+        if (this.accountId != null) {
+            backgroundExecutor.submit(() -> {
+                try {
+                    String name = dbconn.getAccountNameById(this.accountId);
+                    final String title = (name != null && !name.isEmpty()) ? "UNP Cat-alog - User: " + name : "UNP Cat-alog";
+                    SwingUtilities.invokeLater(() -> setTitle(title));
+                } catch (SQLException ex) {
+                    logger.log(Level.FINE, "Failed to load account name", ex);
+                    SwingUtilities.invokeLater(() -> setTitle("UNP Cat-alog"));
+                }
+            });
+        } else {
+            SwingUtilities.invokeLater(() -> setTitle("UNP Cat-alog"));
+        }
     }
 
     private void startQRPrev() {
         SwingUtilities.invokeLater(() -> {
-            try {
-                // Create QRStuff (uses default webcam)
-                qrStuff = new QRstuff();
-
-                // Obtain the WebcamPanel provided by QRStuff
-                previewPanel = qrStuff.getWebcamPanel();
-
-                // Configure preview to scale to fill the component
-                previewPanel.setFillArea(true);
-
-                // Put the preview into the existing jPanel1
-                webcamPanel.removeAll();
-                webcamPanel.setLayout(new BorderLayout());
-                webcamPanel.add(previewPanel, BorderLayout.CENTER);
-
-                // Ensure preview initially matches panel size (if already laid out)
-                Dimension initial = webcamPanel.getSize();
-                if (initial == null || initial.width == 0 || initial.height == 0) {
-                    initial = webcamPanel.getPreferredSize();
-                    if (initial == null || initial.width == 0 || initial.height == 0) {
-                        initial = new Dimension(640, 480);
-                    }
-                }
-                previewPanel.setPreferredSize(initial);
-                previewPanel.setSize(initial);
-                previewPanel.revalidate();
-
-                // Listen for jPanel1 resize events and adapt preview + webcam
-                webcamPanel.addComponentListener(new ComponentAdapter() {
-                    @Override
-                    public void componentResized(ComponentEvent e) {
-                        Dimension newSize = webcamPanel.getSize();
-                        if (newSize == null) {
-                            return;
-                        }
-
-                        // Update preview panel sizing so the displayed image scales
-                        try {
-                            previewPanel.setPreferredSize(newSize);
-                            previewPanel.setSize(newSize);
-                            previewPanel.revalidate();
-                        } catch (Throwable ignored) {
-                        }
-
-                        // Attempt to set webcam view size to closest supported resolution for better quality.
-                        try {
-                            Webcam camera = qrStuff.getWebcam();
-                            if (camera != null) {
-                                Dimension best = findClosestSize(camera, newSize);
-                                if (best != null) {
-                                    Dimension current = camera.getViewSize();
-                                    if (current == null || !current.equals(best)) {
-                                        camera.setViewSize(best);
-                                    }
-                                }
-                            }
-                        } catch (Throwable ex) {
-                            // don't break UI on failure; just log at FINE
-                            logger.log(Level.FINE, "Failed to adjust webcam view size", ex);
-                        }
-                    }
-                });
-
-                // Refresh layout
-                pack();
-                revalidate();
-                repaint();
-
-                // Start scanning (caller may choose to start later instead)
-                try {
-                    qrStuff.startScanning();
-                } catch (Throwable t) {
-                    logger.log(Level.FINE, "qrStuff.startScanning threw", t);
-                }
-
-                // Optional: register callbacks (console logging)
-                try {
-                    qrStuff.setDecodedCallback(text -> System.out.println("Decoded: " + text));
-                    qrStuff.setCatIdCallback(id -> System.out.println("Cat ID: " + id));
-                    qrStuff.setStatusCallback(status -> System.out.println("Status: " + status));
-                } catch (Throwable t) {
-                    // ignore if callbacks not present
-                }
-
-            } catch (NoClassDefFoundError ncd) {
-                logger.severe("Missing native/library dependency: " + ncd.getMessage());
-            } catch (Throwable t) {
-                logger.log(Level.SEVERE, "Failed to initialize QR preview", t);
-            }
+            startButton.setEnabled(false);
+            stopButton.setEnabled(false);
         });
+
+        new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                qrStuff = new QRstuff();
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    get();
+
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            qrStuff.attachToPanel(webcamPanel);
+                        } catch (Throwable t) {
+                            logger.log(Level.SEVERE, "Failed to attach preview panel", t);
+                            JOptionPane.showMessageDialog(qrMenu.this, "Failed to attach preview: " + t.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+
+                    backgroundExecutor.submit(() -> {
+                        try {
+                            qrStuff.startScanning();
+                        } catch (Throwable t) {
+                            logger.log(Level.FINE, "qrStuff.startScanning threw", t);
+                            SwingUtilities.invokeLater(() -> {
+                                JOptionPane.showMessageDialog(qrMenu.this, "Failed to start QR scanning:\n" + t.getMessage(), "Scanner error", JOptionPane.ERROR_MESSAGE);
+                            });
+                            started.set(false);
+                            SwingUtilities.invokeLater(() -> {
+                                startButton.setEnabled(true);
+                                stopButton.setEnabled(false);
+                            });
+                        }
+                    });
+
+                    // Update UI buttons to running state
+                    SwingUtilities.invokeLater(() -> {
+                        startButton.setEnabled(false);
+                        stopButton.setEnabled(true);
+                    });
+
+                } catch (Exception ex) {
+                    logger.log(Level.SEVERE, "Failed to initialize QR preview", ex);
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(qrMenu.this, "Failed to initialize camera:\n" + ex.getMessage(), "Camera error", JOptionPane.ERROR_MESSAGE);
+                        startButton.setEnabled(true);
+                        stopButton.setEnabled(false);
+                    });
+                    if (qrStuff != null) {
+                        qrStuff.submitCleanup(() -> {
+                            SwingUtilities.invokeLater(() -> {
+                                startButton.setEnabled(true);
+                                stopButton.setEnabled(false);
+                                started.set(false);
+                            });
+                        });
+                    }
+                }
+            }
+        }.execute();
 
         // Ensure QRStuff is disposed when the window closes
         if (windowListenerAdded.compareAndSet(false, true)) {
             addWindowListener(new WindowAdapter() {
                 @Override
                 public void windowClosing(WindowEvent e) {
-                    // Quick UI work on EDT to detach heavy components so the window can close fast.
                     SwingUtilities.invokeLater(() -> {
                         try {
                             webcamPanel.removeAll();
@@ -194,112 +176,82 @@ public class qrMenu extends javax.swing.JFrame {
                         }
                     });
 
-                    // Perform heavy cleanup asynchronously so the EDT isn't blocked.
-                    submitCleanup();
+                    if (qrStuff != null) {
+                        qrStuff.submitCleanup(() -> {
+                        });
+                    } else {
+                    }
                 }
 
                 @Override
                 public void windowClosed(WindowEvent e) {
-                    submitCleanup();
+                    if (qrStuff != null) {
+                        qrStuff.submitCleanup(() -> {
+                            SwingUtilities.invokeLater(() -> {
+                                startButton.setEnabled(true);
+                                stopButton.setEnabled(false);
+                                started.set(false);
+                            });
+                        });
+                    }
+                    // shutdown background executor used for non-QR tasks
+                    backgroundExecutor.shutdown();
+                    try {
+                        if (!backgroundExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
+                            backgroundExecutor.shutdownNow();
+                        }
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                        backgroundExecutor.shutdownNow();
+                    }
                 }
             });
         }
     }
 
     private void submitCleanup() {
-        cleanupExecutor.submit(() -> {
-            try {
-                if (qrStuff != null) {
+        if (qrStuff != null) {
+            qrStuff.submitCleanup(() -> {
+                SwingUtilities.invokeLater(() -> {
                     try {
-                        qrStuff.stopScanning();
-                    } catch (Throwable t) {
-                        logger.log(Level.FINE, "stopScanning threw", t);
+                        startButton.setEnabled(true);
+                        stopButton.setEnabled(false);
+                        started.set(false);
+                        try {
+                            webcamPanel.removeAll();
+                            webcamPanel.revalidate();
+                            webcamPanel.repaint();
+                        } catch (Throwable ignored) {
+                        }
+                    } catch (Throwable ignored) {
                     }
-                }
-            } catch (Throwable t) {
-                logger.log(Level.FINE, "Failed while attempting to stop scanning", t);
-            }
-
-            try {
-                if (previewPanel != null) {
-                    try {
-                        previewPanel.stop();
-                    } catch (Throwable t) {
-                        logger.log(Level.FINE, "previewPanel.stop threw", t);
-                    } finally {
-                        previewPanel = null;
-                    }
-                }
-            } catch (Throwable t) {
-                logger.log(Level.FINE, "Failed while stopping previewPanel", t);
-            }
-
-            try {
-                if (qrStuff != null) {
-                    try {
-                        qrStuff.dispose();
-                    } catch (Throwable t) {
-                        logger.log(Level.FINE, "qrStuff.dispose threw", t);
-                    } finally {
-                        qrStuff = null;
-                    }
-                }
-            } catch (Throwable t) {
-                logger.log(Level.FINE, "Failed while disposing qrStuff", t);
-            }
-
+                });
+            });
+        } else {
             SwingUtilities.invokeLater(() -> {
+                startButton.setEnabled(true);
+                stopButton.setEnabled(false);
+                started.set(false);
                 try {
-                    startButton.setEnabled(true);
-                    stopButton.setEnabled(false);
-                    started.set(false);
+                    webcamPanel.removeAll();
+                    webcamPanel.revalidate();
+                    webcamPanel.repaint();
                 } catch (Throwable ignored) {
                 }
             });
-
-            // Optionally shutdown the executor if you never plan to reopen the preview during the JVM lifetime.
-            // cleanupExecutor.shutdown(); // uncomment if appropriate
-        });
+        }
     }
+    
+    private void updateMenusForRole() {
+        boolean isAdmin = accountRole == Role.ADMIN;
+        boolean isCaretaker = accountRole == Role.CARETAKER;
 
-    private Dimension findClosestSize(Webcam camera, Dimension target) {
-        if (camera == null || target == null) {
-            return null;
-        }
-        Dimension[] supported = camera.getViewSizes();
-        if (supported == null || supported.length == 0) {
-            return null;
-        }
-        Dimension best = supported[0];
-        long bestDiff = Math.abs(best.width - target.width) + Math.abs(best.height - target.height);
-        for (int i = 1; i < supported.length; i++) {
-            Dimension d = supported[i];
-            long diff = Math.abs(d.width - target.width) + Math.abs(d.height - target.height);
-            if (diff < bestDiff) {
-                best = d;
-                bestDiff = diff;
-            }
-        }
-        return best;
-    }
-
-    private void checkAccountType() {
-        if (accountType.equals("admin")) {
-            edcatinfoBtn.setVisible(true);
-            ADpanel.setVisible(true);
-        } else if (accountType.equals("caretaker")) {
-            edcatinfoBtn.setVisible(true);
-            ADpanel.setVisible(false);
-        } else if (accountType.equals("")) {
-            edcatinfoBtn.setVisible(false);
-            ADpanel.setVisible(false);
-        }
+        edcatinfoBtn.setVisible(isAdmin || isCaretaker);
+        ADpanel.setVisible(isAdmin);
     }
 
     public static void setGlobalFont(Font font) {
         FontUIResource fontRes = new FontUIResource(font);
-
-        // Preferred: replace only FontUIResource entries in UIDefaults
         UIDefaults defaults = UIManager.getLookAndFeelDefaults();
         Enumeration<Object> keys = defaults.keys();
         while (keys.hasMoreElements()) {
@@ -309,12 +261,15 @@ public class qrMenu extends javax.swing.JFrame {
                 UIManager.put(key, fontRes);
             }
         }
-
-        // Some LaFs use "defaultFont" or "Component.font" keys; set them too
         UIManager.put("defaultFont", fontRes);
         UIManager.put("Component.font", fontRes);
     }
 
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -471,8 +426,8 @@ public class qrMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_MapBtnActionPerformed
 
     private void ProfBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ProfBtnActionPerformed
-        if (!accountId.equals("")) {
-            ProfileMenu profMenu = new ProfileMenu(Integer.parseInt(accountId));
+        if (accountId != null) {
+            ProfileMenu profMenu = new ProfileMenu(accountId);
             profMenu.setVisible(true);
         } else {
             loginMenu logMenu = new loginMenu();
@@ -496,14 +451,13 @@ public class qrMenu extends javax.swing.JFrame {
                 w.invalidate();
                 w.validate();
                 w.repaint();
-                // If window sizes depend on L&F, re-pack frames to adjust sizes
                 if (w instanceof JFrame) {
                     ((JFrame) w).pack();
                 } else if (w instanceof JDialog) {
                     ((JDialog) w).pack();
                 }
             }
-        } catch (UnsupportedLookAndFeelException ex) {  
+        } catch (UnsupportedLookAndFeelException ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this,
                     "Failed to change theme:\n" + ex.getMessage(),
@@ -516,26 +470,23 @@ public class qrMenu extends javax.swing.JFrame {
         catProfileMenu catProf = new catProfileMenu(0);
         catProf.setVisible(true);
 
-        editCatMenu edMenu = new editCatMenu(Integer.parseInt(accountId), catProf);
-        edMenu.setVisible(true);
+        int aid = (accountId != null) ? accountId : 0;
+//        editCatMenu edMenu = new editCatMenu(aid, catProf);
+//        edMenu.setVisible(true);
     }//GEN-LAST:event_edcatinfoBtnActionPerformed
 
     private void startButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startButtonActionPerformed
-        // Only allow start action if not already started
         if (started.compareAndSet(false, true)) {
-            // Update button states immediately so user sees feedback.
             SwingUtilities.invokeLater(() -> {
                 startButton.setEnabled(false);
-                stopButton.setEnabled(true);
+                stopButton.setEnabled(false);
             });
-            // Start the preview/scanner
             startQRPrev();
         }
     }//GEN-LAST:event_startButtonActionPerformed
 
     private void stopButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopButtonActionPerformed
         if (started.compareAndSet(true, false)) {
-            // Quick UI detach so window can close fast/stop rendering preview
             SwingUtilities.invokeLater(() -> {
                 startButton.setEnabled(true);
                 stopButton.setEnabled(false);
@@ -546,8 +497,6 @@ public class qrMenu extends javax.swing.JFrame {
                 } catch (Throwable ignored) {
                 }
             });
-
-            // Perform heavy cleanup asynchronously
             submitCleanup();
         }
     }//GEN-LAST:event_stopButtonActionPerformed
@@ -566,7 +515,7 @@ public class qrMenu extends javax.swing.JFrame {
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
 
-            setGlobalFont(new Font("Arial", Font.PLAIN, 13));
+            setGlobalFont(new Font("Arial", Font.PLAIN, 12));
             java.awt.EventQueue.invokeLater(() -> {
                 try {
                     new qrMenu("", "").setVisible(true);

@@ -1,22 +1,91 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
- */
 package main;
 
-/**
- *
- * @author Lean
- */
+import main.stuff.dbconn;
+
+import javax.swing.*;
+import java.sql.*;
+import java.util.logging.Level;
+import java.util.regex.Pattern;
+
 public class signupMenu extends javax.swing.JFrame {
-    
+
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(signupMenu.class.getName());
 
-    /**
-     * Creates new form signupMenu
-     */
     public signupMenu() {
         initComponents();
+    }
+
+    private void registerUser(String name, String username, String contact, String passwordPlain) {
+        try (Connection conn = dbconn.getConnection()) {
+            conn.setAutoCommit(false);
+            // 1) check username uniqueness
+            final String checkSql = "SELECT account_id FROM accounts WHERE username = ? LIMIT 1";
+            try (PreparedStatement psCheck = conn.prepareStatement(checkSql)) {
+                psCheck.setString(1, username);
+                try (ResultSet rs = psCheck.executeQuery()) {
+                    if (rs.next()) {
+                        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Username is already taken.", "Registration failed", JOptionPane.ERROR_MESSAGE));
+                        conn.rollback();
+                        return;
+                    }
+                }
+            }
+
+            // 2) insert caretaker and get generated id
+            int caretakerId = 0;
+            final String insertCaretaker = "INSERT INTO caretaker (name, contact_info) VALUES (?, ?)";
+            try (PreparedStatement psCaret = conn.prepareStatement(insertCaretaker, Statement.RETURN_GENERATED_KEYS)) {
+                psCaret.setString(1, name);
+                psCaret.setString(2, contact);
+                int affected = psCaret.executeUpdate();
+                if (affected == 0) {
+                    throw new SQLException("Creating caretaker failed, no rows affected.");
+                }
+                try (ResultSet keys = psCaret.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        caretakerId = keys.getInt(1);
+                    } else {
+                        // fallback: keep 0 (admin entry uses 0 in provided dump)
+                        caretakerId = 0;
+                    }
+                }
+            }
+
+            // 3) insert account
+            final String insertAccount = "INSERT INTO accounts (username, password, account_type, caretaker_id) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement psAcc = conn.prepareStatement(insertAccount, Statement.RETURN_GENERATED_KEYS)) {
+                psAcc.setString(1, username);
+                psAcc.setString(2, passwordPlain);
+                psAcc.setString(3, "caretaker");
+                psAcc.setInt(4, caretakerId);
+                int affected = psAcc.executeUpdate();
+                if (affected == 0) {
+                    throw new SQLException("Creating account failed, no rows affected.");
+                }
+            }
+
+            conn.commit();
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(this, "Registration successful. Your account will be verified by the administrators.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                // Optionally close the signup window after successful registration:
+                this.dispose();
+            });
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, "Database error during registration", ex);
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "An error occurred while creating your account. Please try again later.", "Registration error", JOptionPane.ERROR_MESSAGE));
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Unexpected error during registration", ex);
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "An unexpected error occurred. Please try again later.", "Registration error", JOptionPane.ERROR_MESSAGE));
+        }
+    }
+
+    private static boolean isValidEmail(String email) {
+        if (email == null) {
+            return false;
+        }
+        // simple email regex suitable for basic validation
+        String regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+        return Pattern.compile(regex).matcher(email).matches();
     }
 
     /**
@@ -42,6 +111,8 @@ public class signupMenu extends javax.swing.JFrame {
         jLabel2.setText("jLabel2");
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setTitle("Sign Up");
+        setAlwaysOnTop(true);
         setMaximumSize(new java.awt.Dimension(788, 312));
         setMinimumSize(new java.awt.Dimension(788, 312));
         setPreferredSize(new java.awt.Dimension(788, 312));
@@ -49,7 +120,7 @@ public class signupMenu extends javax.swing.JFrame {
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jLabel1.setText("Signup process will take a few days. Verification process will be done through email and or interviews on video call");
-        getContentPane().add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 250, -1, -1));
+        getContentPane().add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 250, -1, -1));
 
         NameField.setBorder(javax.swing.BorderFactory.createTitledBorder("Name"));
         getContentPane().add(NameField, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 80, 300, -1));
@@ -58,19 +129,9 @@ public class signupMenu extends javax.swing.JFrame {
         getContentPane().add(UsernameField, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 80, 320, -1));
 
         ContactField.setBorder(javax.swing.BorderFactory.createTitledBorder("Email"));
-        ContactField.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                ContactFieldActionPerformed(evt);
-            }
-        });
         getContentPane().add(ContactField, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 160, 300, -1));
 
         PassField.setBorder(javax.swing.BorderFactory.createTitledBorder("Password"));
-        PassField.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                PassFieldActionPerformed(evt);
-            }
-        });
         getContentPane().add(PassField, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 130, 320, -1));
 
         jLabel4.setFont(new java.awt.Font("Arial Black", 0, 24)); // NOI18N
@@ -78,11 +139,6 @@ public class signupMenu extends javax.swing.JFrame {
         getContentPane().add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(500, 30, -1, -1));
 
         ConfirmPassField.setBorder(javax.swing.BorderFactory.createTitledBorder("Confirm Password"));
-        ConfirmPassField.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                ConfirmPassFieldActionPerformed(evt);
-            }
-        });
         getContentPane().add(ConfirmPassField, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 170, 320, -1));
 
         jLabel5.setFont(new java.awt.Font("Arial Black", 0, 24)); // NOI18N
@@ -101,46 +157,40 @@ public class signupMenu extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
-    private void ContactFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ContactFieldActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_ContactFieldActionPerformed
-
-    private void PassFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_PassFieldActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_PassFieldActionPerformed
-
-    private void ConfirmPassFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ConfirmPassFieldActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_ConfirmPassFieldActionPerformed
-
     private void RegisterBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_RegisterBtnActionPerformed
-        // TODO add your handling code here:
+
+        final String name = NameField.getText().trim();
+        final String username = UsernameField.getText().trim();
+        final String contact = ContactField.getText().trim();
+        final char[] pass = PassField.getPassword();
+        final char[] confirm = ConfirmPassField.getPassword();
+
+        if (name.isEmpty() || username.isEmpty() || contact.isEmpty() || pass.length == 0 || confirm.length == 0) {
+            JOptionPane.showMessageDialog(this, "Please fill out all fields.", "Validation error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!java.util.Arrays.equals(pass, confirm)) {
+            JOptionPane.showMessageDialog(this, "Passwords do not match.", "Validation error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!isValidEmail(contact)) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid email address.", "Validation error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        RegisterBtn.setEnabled(false);
+
+        new Thread(() -> {
+            try {
+                registerUser(name, username, contact, new String(pass));
+            } finally {
+                java.util.Arrays.fill(pass, '\0');
+                java.util.Arrays.fill(confirm, '\0');
+                SwingUtilities.invokeLater(() -> RegisterBtn.setEnabled(true));
+            }
+        }).start();
     }//GEN-LAST:event_RegisterBtnActionPerformed
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new signupMenu().setVisible(true));
-    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPasswordField ConfirmPassField;

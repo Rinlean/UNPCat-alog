@@ -1,7 +1,14 @@
 package main.stuff;
 
+import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
+import java.nio.charset.StandardCharsets;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -10,29 +17,34 @@ import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+
 import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamPanel;
 
 import com.google.zxing.BinaryBitmap;
+import com.google.zxing.DecodeHintType;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.MultiFormatReader;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.Result;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
-import javax.swing.SwingUtilities;
+
 import main.catProfileMenu;
 
-/**
- * QRStuff: Non-UI QR scanner that provides a WebcamPanel for embedding into a
- * Swing container. - Keeps decoding logic separate from UI. - Caller (qrMenu)
- * is responsible for adding the returned WebcamPanel into its jPanel and for
- * calling dispose() when the window closes.
- */
 public class QRstuff {
 
-    // only accepts "cat_id = 123" pattern
+    // Accepts strict "cat_id = 123"
     private static final Pattern CAT_ID_EXACT = Pattern.compile("(?i)^\\s*cat_id\\s*=\\s*(\\d+)\\s*$");
+    // Accept things like "...cat_id:123..." or "...cat-id=123..." (looser)
+    private static final Pattern CAT_ID_LOOSE = Pattern.compile("(?i).*\\bcat(?:_|-)?id\\b\\s*[:=]?\\s*(\\d+).*");
+    // Accept "/cat/123" style urls or ".../cat/123/..."
+    private static final Pattern CAT_URL = Pattern.compile("(?i).*/cat/(\\d+).*");
+    // Simple fallback: matches "id=123", "cat: 123", etc.
+    private static final Pattern GENERIC_ID = Pattern.compile("(?i).*\\b(?:id|cat)\\b\\s*[:=]?\\s*(\\d+).*");
+
     private static final long DEBOUNCE_MS = 3000L;
 
     private final Webcam webcam;
@@ -44,38 +56,39 @@ public class QRstuff {
         return t;
     });
 
+    private final ExecutorService cleanupExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "qr-cleanup");
+        t.setDaemon(true);
+        return t;
+    });
+
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private String lastDecoded;
     private long lastTimeMillis;
 
-    // callbacks
     private Consumer<String> decodedCallback;
     private Consumer<Integer> catIdCallback;
     private Consumer<String> statusCallback;
 
-    /**
-     * Create QRStuff and use the default webcam. Does not start scanning
-     * automatically.
-     *
-     * @throws IllegalStateException when no webcam is available
-     */
+    private volatile boolean autoOpenProfile = true;
+
+    private final Map<DecodeHintType, Object> decodeHints;
+
     public QRstuff() {
         this(Webcam.getDefault());
     }
 
-    /**
-     * Create QRStuff using an existing Webcam instance (useful when caller
-     * wants to share camera). Does not start scanning automatically.
-     *
-     * @param webcam non-null Webcam instance
-     */
     public QRstuff(Webcam webcam) {
         if (webcam == null) {
             throw new IllegalStateException("No webcam available.");
         }
         this.webcam = webcam;
-        // prefer a reasonable default view size if available
+
+        decodeHints = new EnumMap<>(DecodeHintType.class);
+        decodeHints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
+        decodeHints.put(DecodeHintType.CHARACTER_SET, StandardCharsets.UTF_8.name());
+
         try {
             if (webcam.getViewSizes().length > 0) {
                 webcam.setViewSize(webcam.getViewSizes()[0]);
@@ -87,13 +100,6 @@ public class QRstuff {
         notifyStatus("QRStuff initialized");
     }
 
-    /**
-     * Returns a configured WebcamPanel that you can add to your Swing layout
-     * (for example jPanel1). The panel will be created lazily and returned. The
-     * panel is also automatically started here so it begins previewing
-     * immediately; if you prefer to manage starting yourself, stop() the panel
-     * before calling start() manually.
-     */
     public synchronized WebcamPanel getWebcamPanel() {
         if (webcamPanel != null) {
             return webcamPanel;
@@ -102,19 +108,75 @@ public class QRstuff {
         webcamPanel.setFPSDisplayed(false);
         webcamPanel.setMirrored(false);
 
-        // starting the panel will open the webcam (if not already opened) and start preview thread
         try {
             webcamPanel.start();
         } catch (Throwable t) {
-            // panel.start() can throw if native libs missing or camera taken - bubble as status
             notifyStatus("Failed to start webcam preview: " + t.getMessage());
         }
         return webcamPanel;
     }
 
-    /**
-     * Start decoding loop in a background thread. Safe to call multiple times.
-     */
+    public synchronized void attachToPanel(JPanel parent) {
+        if (parent == null) {
+            throw new IllegalArgumentException("parent panel must not be null");
+        }
+
+        WebcamPanel panel = getWebcamPanel(); // creates and starts panel if needed
+        panel.setFillArea(true);
+
+        parent.removeAll();
+        parent.setLayout(new BorderLayout());
+        parent.add(panel, BorderLayout.CENTER);
+
+        Dimension initial = parent.getSize();
+        if (initial == null || initial.width == 0 || initial.height == 0) {
+            initial = parent.getPreferredSize();
+            if (initial == null || initial.width == 0 || initial.height == 0) {
+                initial = new Dimension(640, 480);
+            }
+        }
+        panel.setPreferredSize(initial);
+        panel.setSize(initial);
+        panel.revalidate();
+
+        // Listen for parent resizes and adapt preview + webcam view size
+        parent.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                Dimension newSize = parent.getSize();
+                if (newSize == null) {
+                    return;
+                }
+
+                try {
+                    panel.setPreferredSize(newSize);
+                    panel.setSize(newSize);
+                    panel.revalidate();
+                } catch (Throwable ignored) {
+                }
+
+                try {
+                    Webcam camera = getWebcam();
+                    if (camera != null) {
+                        Dimension best = findClosestSize(camera, newSize);
+                        if (best != null) {
+                            Dimension current = camera.getViewSize();
+                            if (current == null || !current.equals(best)) {
+                                camera.setViewSize(best);
+                            }
+                        }
+                    }
+                } catch (Throwable ex) {
+                    notifyStatus("Failed to adjust webcam view size: " + ex.getMessage());
+                }
+            }
+        });
+
+        // ensure layout refresh
+        parent.revalidate();
+        parent.repaint();
+    }
+
     public void startScanning() {
         if (running.compareAndSet(false, true)) {
             notifyStatus("Scanning...");
@@ -122,15 +184,14 @@ public class QRstuff {
         }
     }
 
-    /**
-     * Stop decoding loop.
-     */
     public void stopScanning() {
         running.set(false);
     }
 
     private void decodeLoop() {
         MultiFormatReader reader = new MultiFormatReader();
+        reader.setHints(decodeHints);
+
         while (running.get()) {
             try {
                 BufferedImage image = webcam.getImage();
@@ -141,7 +202,7 @@ public class QRstuff {
                 try {
                     LuminanceSource source = new BufferedImageLuminanceSource(image);
                     BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
-                    Result result = reader.decode(bitmap);
+                    Result result = reader.decodeWithState(bitmap);
                     if (result != null) {
                         handleDecodedText(result.getText());
                     }
@@ -176,6 +237,7 @@ public class QRstuff {
         lastTimeMillis = now;
 
         notifyStatus("Decoded: " + decoded);
+
         if (decodedCallback != null) {
             try {
                 decodedCallback.accept(decoded);
@@ -184,17 +246,26 @@ public class QRstuff {
         }
 
         Integer catId = extractCatId(decoded);
+
         if (catId != null) {
-            System.out.println(decoded);
-            SwingUtilities.invokeLater(() -> {
+            if (catIdCallback != null) {
                 try {
-                    catProfileMenu profile = new catProfileMenu(catId);
-                    profile.setVisible(true);
-                } catch (Throwable t) {
+                    catIdCallback.accept(catId);
+                } catch (Throwable ignored) {
                 }
-            });
-        } else {
-            System.out.println(decoded);
+            }
+
+            if (autoOpenProfile) {
+                final Integer idToOpen = catId;
+                SwingUtilities.invokeLater(() -> {
+                    try {
+                        catProfileMenu profile = new catProfileMenu(idToOpen);
+                        profile.setVisible(true);
+                    } catch (Throwable t) {
+                        notifyStatus("Failed to open profile: " + t.getMessage());
+                    }
+                });
+            }
         }
     }
 
@@ -203,6 +274,30 @@ public class QRstuff {
             return null;
         }
         Matcher m = CAT_ID_EXACT.matcher(text);
+        if (m.matches()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        m = CAT_ID_LOOSE.matcher(text);
+        if (m.matches()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        m = CAT_URL.matcher(text);
+        if (m.matches()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        m = GENERIC_ID.matcher(text);
         if (m.matches()) {
             try {
                 return Integer.parseInt(m.group(1));
@@ -226,6 +321,10 @@ public class QRstuff {
         this.statusCallback = cb;
     }
 
+    public void setAutoOpenProfile(boolean autoOpen) {
+        this.autoOpenProfile = autoOpen;
+    }
+
     private void notifyStatus(String s) {
         if (statusCallback != null) {
             try {
@@ -235,20 +334,20 @@ public class QRstuff {
         }
     }
 
-    /**
-     * Stop scanning, stop preview panel thread, shutdown decoder thread and
-     * close the webcam. Safe to call multiple times.
-     */
     public void dispose() {
         stopScanning();
 
         try {
             decoderExecutor.shutdownNow();
-            if (!decoderExecutor.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+            if (!decoderExecutor.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
                 decoderExecutor.shutdownNow();
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
+            try {
+                decoderExecutor.shutdownNow();
+            } catch (Throwable ignored) {
+            }
         } catch (Throwable ignored) {
         }
 
@@ -271,7 +370,57 @@ public class QRstuff {
         notifyStatus("Disposed");
     }
 
+    public void submitCleanup(Runnable onFinished) {
+        cleanupExecutor.submit(() -> {
+            try {
+                dispose();
+            } catch (Throwable t) {
+                notifyStatus("Error during cleanup: " + t.getMessage());
+            } finally {
+                try {
+                    cleanupExecutor.shutdown();
+                    if (!cleanupExecutor.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+                        cleanupExecutor.shutdownNow();
+                    }
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    cleanupExecutor.shutdownNow();
+                } catch (Throwable ignored) {
+                }
+            }
+
+            if (onFinished != null) {
+                SwingUtilities.invokeLater(onFinished);
+            }
+        });
+    }
+
+    public void submitCleanup() {
+        submitCleanup(null);
+    }
+
     public Webcam getWebcam() {
         return webcam;
+    }
+
+    private Dimension findClosestSize(Webcam camera, Dimension target) {
+        if (camera == null || target == null) {
+            return null;
+        }
+        Dimension[] supported = camera.getViewSizes();
+        if (supported == null || supported.length == 0) {
+            return null;
+        }
+        Dimension best = supported[0];
+        long bestDiff = Math.abs(best.width - target.width) + Math.abs(best.height - target.height);
+        for (int i = 1; i < supported.length; i++) {
+            Dimension d = supported[i];
+            long diff = Math.abs(d.width - target.width) + Math.abs(d.height - target.height);
+            if (diff < bestDiff) {
+                best = d;
+                bestDiff = diff;
+            }
+        }
+        return best;
     }
 }
