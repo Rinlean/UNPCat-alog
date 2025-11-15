@@ -372,8 +372,8 @@ public class catProfileMenu extends javax.swing.JFrame {
         jLabel16 = new javax.swing.JLabel();
         jTabbedPane1 = new javax.swing.JTabbedPane();
         healthScroll = new javax.swing.JScrollPane();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        jScrollPane3 = new javax.swing.JScrollPane();
+        incidentScroll = new javax.swing.JScrollPane();
+        CaretakerScroll = new javax.swing.JScrollPane();
         jScrollPane4 = new javax.swing.JScrollPane();
         taBehavior = new javax.swing.JTextArea();
 
@@ -437,15 +437,15 @@ public class catProfileMenu extends javax.swing.JFrame {
 
         jTabbedPane1.addTab("Health", healthScroll);
 
-        tblCaretakers.setModel(caretakersModel);
-        jScrollPane2.setViewportView(tblCaretakers);
-
-        jTabbedPane1.addTab("Caretaker", jScrollPane2);
-
         tblIncidents.setModel(incidentsModel);
-        jScrollPane3.setViewportView(tblIncidents);
+        incidentScroll.setViewportView(tblIncidents);
 
-        jTabbedPane1.addTab("Incidents", jScrollPane3);
+        jTabbedPane1.addTab("Incidents", incidentScroll);
+
+        tblCaretakers.setModel(caretakersModel);
+        CaretakerScroll.setViewportView(tblCaretakers);
+
+        jTabbedPane1.addTab("Caretaker", CaretakerScroll);
 
         getContentPane().add(jTabbedPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 360, 720, 360));
 
@@ -467,46 +467,52 @@ public class catProfileMenu extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
+    public static void testMenu() {
         int id = -1;
-        if (args.length == 0) {
-            String input = JOptionPane.showInputDialog(null, "Enter cat_id to view:", "Open Cat Profile", JOptionPane.QUESTION_MESSAGE);
-            if (input == null) {
-                return; // user cancelled
-            }
-            try {
-                id = Integer.parseInt(input.trim());
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(null, "Invalid cat_id: " + input, "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-        } else {
-            try {
-                id = Integer.parseInt(args[0]);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(null, "Invalid cat_id argument: " + args[0], "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+        String input = JOptionPane.showInputDialog(null, "Enter cat_id to view:", "Open Cat Profile", JOptionPane.QUESTION_MESSAGE);
+        if (input == null) {
+            return; // user cancelled
+        }
+        try {
+            id = Integer.parseInt(input.trim());
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(null, "Invalid cat_id: " + input, "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
         final int catId = id;
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {
-        }
         SwingUtilities.invokeLater(() -> {
             catProfileMenu win = new catProfileMenu(catId);
             win.setVisible(true);
         });
     }
 
+    public static void testMenu(String[] args) {
+        if (args != null && args.length > 0) {
+            int id;
+            try {
+                id = Integer.parseInt(args[0].trim());
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(null, "Invalid cat_id argument: " + args[0], "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            final int catId = id;
+            SwingUtilities.invokeLater(() -> {
+                catProfileMenu win = new catProfileMenu(catId);
+                win.setVisible(true);
+            });
+        } else {
+            // no args provided - behave like testMenu()
+            testMenu();
+        }
+    }
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JScrollPane CaretakerScroll;
     private javax.swing.JPanel adoptionPanel;
     private javax.swing.JPanel basicInfoPnl;
     private javax.swing.JScrollPane healthScroll;
+    private javax.swing.JScrollPane incidentScroll;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel13;
     private javax.swing.JLabel jLabel14;
@@ -517,8 +523,6 @@ public class catProfileMenu extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
-    private javax.swing.JScrollPane jScrollPane2;
-    private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
     private javax.swing.JTabbedPane jTabbedPane1;
     final javax.swing.JLabel lblAdopter = new javax.swing.JLabel();

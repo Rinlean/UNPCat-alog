@@ -8,6 +8,9 @@ import java.util.logging.Level;
 import javax.swing.SwingUtilities;
 
 import com.github.sarxos.webcam.WebcamPanel;
+import java.sql.PreparedStatement;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.awt.Font;
 import java.awt.Window;
 import java.sql.SQLException;
@@ -79,13 +82,32 @@ public class qrMenu extends javax.swing.JFrame {
 
         if (this.accountId != null) {
             backgroundExecutor.submit(() -> {
-                try {
-                    String name = dbconn.getAccountNameById(this.accountId);
-                    final String title = (name != null && !name.isEmpty()) ? "UNP Cat-alog - User: " + name : "UNP Cat-alog";
-                    SwingUtilities.invokeLater(() -> setTitle(title));
+                String title = "UNP Cat-alog";
+                final String sql
+                        = "SELECT c.name AS caretaker_name, a.username "
+                        + "FROM accounts a "
+                        + "LEFT JOIN caretaker c ON a.caretaker_id = c.caretaker_id "
+                        + "WHERE a.account_id = ?";
+                try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, this.accountId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            String caretakerName = rs.getString("caretaker_name");
+                            String username = rs.getString("username");
+                            if (caretakerName != null && !caretakerName.trim().isEmpty()) {
+                                title = "UNP Cat-alog - User: " + caretakerName;
+                            } else if (username != null && !username.trim().isEmpty()) {
+                                title = "UNP Cat-alog - User: " + username;
+                            }
+                        }
+                    }
                 } catch (SQLException ex) {
-                    logger.log(Level.FINE, "Failed to load account name", ex);
-                    SwingUtilities.invokeLater(() -> setTitle("UNP Cat-alog"));
+                    logger.log(Level.FINE, "Failed to load account/caretaker name", ex);
+                } catch (Exception ex) {
+                    logger.log(Level.FINE, "Unexpected error loading name", ex);
+                } finally {
+                    final String finalTitle = title;
+                    SwingUtilities.invokeLater(() -> setTitle(finalTitle));
                 }
             });
         } else {
@@ -241,7 +263,7 @@ public class qrMenu extends javax.swing.JFrame {
             });
         }
     }
-    
+
     private void updateMenusForRole() {
         boolean isAdmin = accountRole == Role.ADMIN;
         boolean isCaretaker = accountRole == Role.CARETAKER;
@@ -281,10 +303,9 @@ public class qrMenu extends javax.swing.JFrame {
         DarkToggBtn = new javax.swing.JToggleButton();
         startButton = new javax.swing.JButton();
         stopButton = new javax.swing.JButton();
-        testcatprofilemenu = new javax.swing.JButton();
         ADpanel = new javax.swing.JPanel();
         ADeditCtakersBtn = new javax.swing.JButton();
-        ADaddcat = new javax.swing.JButton();
+        testcatprofilemenu = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("UNP Cat-alog");
@@ -363,24 +384,15 @@ public class qrMenu extends javax.swing.JFrame {
         getContentPane().add(stopButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(820, 650, 290, -1));
         stopButton.setEnabled(false);
 
-        testcatprofilemenu.setText("testcatprof");
-        testcatprofilemenu.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                testcatprofilemenuActionPerformed(evt);
-            }
-        });
-        getContentPane().add(testcatprofilemenu, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 650, -1, -1));
-
         ADpanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Admin Panel", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial Black", 0, 12))); // NOI18N
 
         ADeditCtakersBtn.setText("Edit Caretakers");
         ADeditCtakersBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
 
-        ADaddcat.setText("Add Cats");
-        ADaddcat.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        ADaddcat.addActionListener(new java.awt.event.ActionListener() {
+        testcatprofilemenu.setText("Test Cat Profile");
+        testcatprofilemenu.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                ADaddcatActionPerformed(evt);
+                testcatprofilemenuActionPerformed(evt);
             }
         });
 
@@ -390,9 +402,9 @@ public class qrMenu extends javax.swing.JFrame {
             ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(ADpanelLayout.createSequentialGroup()
                 .addGap(35, 35, 35)
-                .addGroup(ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(ADaddcat, javax.swing.GroupLayout.PREFERRED_SIZE, 270, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 270, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGroup(ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE)
+                    .addComponent(testcatprofilemenu, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addGap(35, 35, 35))
         );
         ADpanelLayout.setVerticalGroup(
@@ -401,11 +413,11 @@ public class qrMenu extends javax.swing.JFrame {
                 .addGap(35, 35, 35)
                 .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(ADaddcat, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(testcatprofilemenu, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
-        getContentPane().add(ADpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 420, 350, 220));
+        getContentPane().add(ADpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 420, 350, 180));
 
         pack();
         setLocationRelativeTo(null);
@@ -470,9 +482,35 @@ public class qrMenu extends javax.swing.JFrame {
         catProfileMenu catProf = new catProfileMenu(0);
         catProf.setVisible(true);
 
-        int aid = (accountId != null) ? accountId : 0;
-//        editCatMenu edMenu = new editCatMenu(aid, catProf);
-//        edMenu.setVisible(true);
+        int aid = 0;
+        if (accountId != null) {
+            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT caretaker_id FROM accounts WHERE account_id = ?")) {
+                ps.setInt(1, accountId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        int caretakerId = rs.getInt("caretaker_id");
+                        if (!rs.wasNull()) {
+                            aid = caretakerId;
+                        } else {
+                            aid = 0;
+                        }
+                    } else {
+                        aid = 0;
+                    }
+                }
+            } catch (SQLException ex) {
+                logger.log(Level.WARNING, "Failed to lookup caretaker_id for account {0}", new Object[]{accountId});
+                logger.log(java.util.logging.Level.FINE, "SQLException while retrieving caretaker_id", ex);
+                JOptionPane.showMessageDialog(this,
+                        "Failed to determine caretaker mapping:\n" + ex.getMessage(),
+                        "DB error",
+                        JOptionPane.ERROR_MESSAGE);
+                aid = 0;
+            }
+        }
+
+        editCatMenu edMenu = new editCatMenu(aid, catProf);
+        edMenu.setVisible(true);
     }//GEN-LAST:event_edcatinfoBtnActionPerformed
 
     private void startButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startButtonActionPerformed
@@ -502,14 +540,8 @@ public class qrMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_stopButtonActionPerformed
 
     private void testcatprofilemenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_testcatprofilemenuActionPerformed
-        catProfileMenu catProf = new catProfileMenu(2);
-        catProf.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        catProf.setVisible(true);
+        catProfileMenu.testMenu();
     }//GEN-LAST:event_testcatprofilemenuActionPerformed
-
-    private void ADaddcatActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ADaddcatActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_ADaddcatActionPerformed
 
     public static void main(String[] args) {
         try {
@@ -530,7 +562,6 @@ public class qrMenu extends javax.swing.JFrame {
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton ADaddcat;
     private javax.swing.JButton ADeditCtakersBtn;
     private javax.swing.JPanel ADpanel;
     private javax.swing.JToggleButton DarkToggBtn;

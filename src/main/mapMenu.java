@@ -71,9 +71,10 @@ public class mapMenu extends javax.swing.JFrame {
 
         jComboBox1 = new javax.swing.JComboBox<>();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("UNP Cat-alog");
-        setMinimumSize(new java.awt.Dimension(1280, 720));
+        setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setTitle("UNP Cat-alog Map");
+        setMaximumSize(new java.awt.Dimension(1280, 800));
+        setMinimumSize(new java.awt.Dimension(1280, 800));
         setResizable(false);
 
         jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
@@ -98,21 +99,6 @@ public class mapMenu extends javax.swing.JFrame {
         setLocation(new java.awt.Point(600, 300));
     }// </editor-fold>//GEN-END:initComponents
 
-        public static void main(String args[]) {
-            try {
-                // Set the desired FlatLaf look and feel
-                UIManager.setLookAndFeel(new FlatLightLaf()); 
-
-                // Create and display your UI here
-                java.awt.EventQueue.invokeLater(new Runnable() {
-                    public void run() {
-                        new mapMenu().setVisible(true);
-                    }
-                });
-
-            } catch (UnsupportedLookAndFeelException ex) {
-            }
-        }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JComboBox<String> jComboBox1;

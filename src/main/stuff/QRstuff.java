@@ -52,22 +52,9 @@ public class QRstuff {
     private static final int MAX_WIDTH = 1280;
     private static final int MAX_HEIGHT = 720;
 
-    // common barcode formats to try (adjust for your environment)
     private static final List<BarcodeFormat> DEFAULT_FORMATS = Arrays.asList(
             BarcodeFormat.QR_CODE,
-            BarcodeFormat.DATA_MATRIX,
-            BarcodeFormat.AZTEC,
-            BarcodeFormat.PDF_417,
-            // 1D formats
-            BarcodeFormat.CODE_128,
-            BarcodeFormat.CODE_39,
-            BarcodeFormat.CODE_93,
-            BarcodeFormat.EAN_13,
-            BarcodeFormat.EAN_8,
-            BarcodeFormat.UPC_A,
-            BarcodeFormat.UPC_E,
-            BarcodeFormat.ITF,
-            BarcodeFormat.CODABAR
+            BarcodeFormat.CODE_128
     );
 
     private final Webcam webcam;
@@ -131,10 +118,6 @@ public class QRstuff {
         notifyStatus("QRStuff initialized");
     }
 
-    /**
-     * Returns a configured WebcamPanel that you can add to your Swing layout.
-     * The panel is created lazily and started here (preview thread).
-     */
     public synchronized WebcamPanel getWebcamPanel() {
         if (webcamPanel != null) {
             return webcamPanel;
@@ -150,12 +133,6 @@ public class QRstuff {
         return webcamPanel;
     }
 
-    /**
-     * Attach the internal WebcamPanel into the provided parent JPanel and
-     * register a resize listener that will attempt to pick the closest camera
-     * view size for better quality. This method manipulates Swing components
-     * and must be called on the EDT.
-     */
     public synchronized void attachToPanel(JPanel parent) {
         if (parent == null) {
             throw new IllegalArgumentException("parent panel must not be null");
@@ -231,13 +208,6 @@ public class QRstuff {
         running.set(false);
     }
 
-    /**
-     * The main decode loop - polls webcam frames, lightly preprocesses them,
-     * and attempts to decode using ZXing MultiFormatReader. When a Result is
-     * found, appropriate callbacks are invoked. Debounces repeated reads.
-     *
-     * This method runs on the decoderExecutor thread.
-     */
     private void decodeLoop() {
         MultiFormatReader reader = new MultiFormatReader();
         reader.setHints(decodeHints);
@@ -398,17 +368,12 @@ public class QRstuff {
         return enhanced;
     }
 
-    /**
-     * Simple contrast stretch producing a grayscale-like RGB image; inexpensive
-     * but can help QR/barcode detection in low-contrast lighting.
-     */
     private static BufferedImage contrastStretch(BufferedImage img) {
         int w = img.getWidth();
         int h = img.getHeight();
         BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
 
         int min = 255, max = 0;
-        // sample grid to compute min/max luminance approximately
         for (int y = 0; y < h; y += 6) {
             for (int x = 0; x < w; x += 6) {
                 int rgb = img.getRGB(x, y);
@@ -482,15 +447,10 @@ public class QRstuff {
         return null;
     }
 
-    // --- Callbacks registration ---
-
     public void setDecodedCallback(Consumer<String> cb) {
         this.decodedCallback = cb;
     }
 
-    /**
-     * Receive the full ZXing Result (text + format + raw bytes).
-     */
     public void setResultCallback(Consumer<Result> cb) {
         this.resultCallback = cb;
     }
@@ -516,10 +476,6 @@ public class QRstuff {
         }
     }
 
-    /**
-     * Synchronous dispose: stops scanning, shuts down decoder thread(s), stops preview and closes webcam.
-     * Safe to call from a background thread.
-     */
     public void dispose() {
         stopScanning();
 

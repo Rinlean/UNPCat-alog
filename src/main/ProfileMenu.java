@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -106,10 +107,11 @@ public class ProfileMenu extends javax.swing.JFrame {
         nameLabel = new javax.swing.JLabel();
         IDlabel = new javax.swing.JLabel();
         Contact = new javax.swing.JLabel();
-        jPasswordField1 = new javax.swing.JPasswordField();
-        jPasswordField2 = new javax.swing.JPasswordField();
-        jPasswordField3 = new javax.swing.JPasswordField();
+        OldPassword = new javax.swing.JPasswordField();
+        NewPassword = new javax.swing.JPasswordField();
+        ConfirmPassword = new javax.swing.JPasswordField();
         LogoutBtn = new javax.swing.JButton();
+        SaveBtn = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setMaximumSize(new java.awt.Dimension(400, 350));
@@ -136,24 +138,14 @@ public class ProfileMenu extends javax.swing.JFrame {
         Contact.setText("Contact");
         getContentPane().add(Contact, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 130, -1, -1));
 
-        jPasswordField1.setBorder(javax.swing.BorderFactory.createTitledBorder("Password"));
-        jPasswordField1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jPasswordField1ActionPerformed(evt);
-            }
-        });
-        getContentPane().add(jPasswordField1, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 170, 153, -1));
+        OldPassword.setBorder(javax.swing.BorderFactory.createTitledBorder("Old Password"));
+        getContentPane().add(OldPassword, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 170, 200, -1));
 
-        jPasswordField2.setBorder(javax.swing.BorderFactory.createTitledBorder("Password"));
-        jPasswordField2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jPasswordField2ActionPerformed(evt);
-            }
-        });
-        getContentPane().add(jPasswordField2, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 220, 153, -1));
+        NewPassword.setBorder(javax.swing.BorderFactory.createTitledBorder("New Password"));
+        getContentPane().add(NewPassword, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 220, 200, -1));
 
-        jPasswordField3.setBorder(javax.swing.BorderFactory.createTitledBorder("Password"));
-        getContentPane().add(jPasswordField3, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 270, 153, -1));
+        ConfirmPassword.setBorder(javax.swing.BorderFactory.createTitledBorder("Confirm Password"));
+        getContentPane().add(ConfirmPassword, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 270, 200, -1));
 
         LogoutBtn.setText("Logout");
         LogoutBtn.addActionListener(new java.awt.event.ActionListener() {
@@ -161,7 +153,15 @@ public class ProfileMenu extends javax.swing.JFrame {
                 LogoutBtnActionPerformed(evt);
             }
         });
-        getContentPane().add(LogoutBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(280, 280, -1, -1));
+        getContentPane().add(LogoutBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(290, 270, -1, -1));
+
+        SaveBtn.setText("Save");
+        SaveBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                SaveBtnActionPerformed(evt);
+            }
+        });
+        getContentPane().add(SaveBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(290, 230, -1, -1));
 
         pack();
         setLocationRelativeTo(null);
@@ -190,22 +190,144 @@ public class ProfileMenu extends javax.swing.JFrame {
 
     }//GEN-LAST:event_LogoutBtnActionPerformed
 
-    private void jPasswordField2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jPasswordField2ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jPasswordField2ActionPerformed
+    private void SaveBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveBtnActionPerformed
 
-    private void jPasswordField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jPasswordField1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jPasswordField1ActionPerformed
+        final char[] oldPwdChars = OldPassword.getPassword();
+        final char[] newPwdChars = NewPassword.getPassword();
+        final char[] confirmPwdChars = ConfirmPassword.getPassword();
+
+        if (accountId <= 0) {
+            JOptionPane.showMessageDialog(this, "Invalid account. Cannot change password.", "Error", JOptionPane.ERROR_MESSAGE);
+            Arrays.fill(oldPwdChars, '\0');
+            Arrays.fill(newPwdChars, '\0');
+            Arrays.fill(confirmPwdChars, '\0');
+            return;
+        }
+
+        if (oldPwdChars == null || oldPwdChars.length == 0) {
+            JOptionPane.showMessageDialog(this, "Please enter your old password.", "Validation", JOptionPane.WARNING_MESSAGE);
+            Arrays.fill(oldPwdChars, '\0');
+            Arrays.fill(newPwdChars, '\0');
+            Arrays.fill(confirmPwdChars, '\0');
+            return;
+        }
+
+        if (newPwdChars == null || newPwdChars.length == 0) {
+            JOptionPane.showMessageDialog(this, "Please enter a new password.", "Validation", JOptionPane.WARNING_MESSAGE);
+            Arrays.fill(oldPwdChars, '\0');
+            Arrays.fill(newPwdChars, '\0');
+            Arrays.fill(confirmPwdChars, '\0');
+            return;
+        }
+
+        if (!Arrays.equals(newPwdChars, confirmPwdChars)) {
+            JOptionPane.showMessageDialog(this, "New password and confirmation do not match.", "Validation", JOptionPane.WARNING_MESSAGE);
+            Arrays.fill(oldPwdChars, '\0');
+            Arrays.fill(newPwdChars, '\0');
+            Arrays.fill(confirmPwdChars, '\0');
+            return;
+        }
+
+        // convert to Strings for DB ops, then immediately clear char arrays
+        final String oldPwd = new String(oldPwdChars);
+        final String newPwd = new String(newPwdChars);
+        Arrays.fill(oldPwdChars, '\0');
+        Arrays.fill(newPwdChars, '\0');
+        Arrays.fill(confirmPwdChars, '\0');
+
+        new SwingWorker<Void, Void>() {
+            Exception error;
+            boolean success = false;
+            String errorMessage = null;
+
+            @Override
+            protected Void doInBackground() {
+                final String selectSql = "SELECT password FROM accounts WHERE account_id = ?";
+                final String updateSql = "UPDATE accounts SET password = ? WHERE account_id = ?";
+                try (Connection conn = getConnection()) {
+                    String currentStored = null;
+                    try (PreparedStatement ps = conn.prepareStatement(selectSql)) {
+                        ps.setInt(1, accountId);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (rs.next()) {
+                                currentStored = rs.getString("password");
+                            } else {
+                                errorMessage = "Account not found.";
+                                return null;
+                            }
+                        }
+                    }
+
+                    if (currentStored == null) {
+                        currentStored = "";
+                    }
+
+                    if (!currentStored.equals(oldPwd)) {
+                        errorMessage = "Old password is incorrect.";
+                        return null;
+                    }
+
+                    try (PreparedStatement ps2 = conn.prepareStatement(updateSql)) {
+                        ps2.setString(1, newPwd);
+                        ps2.setInt(2, accountId);
+                        int updated = ps2.executeUpdate();
+                        if (updated == 1) {
+                            success = true;
+                        } else {
+                            errorMessage = "Failed to update password.";
+                        }
+                    }
+                } catch (Exception ex) {
+                    error = ex;
+                    logger.log(java.util.logging.Level.SEVERE, "Failed to change password", ex);
+                }
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                if (error != null) {
+                    final String msg = "An error occurred while changing password:\n" + error.getMessage();
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(ProfileMenu.this, msg, "Error", JOptionPane.ERROR_MESSAGE);
+                        // clear fields in UI
+                        OldPassword.setText("");
+                        NewPassword.setText("");
+                        ConfirmPassword.setText("");
+                    });
+                    return;
+                }
+
+                if (!success) {
+                    final String msg = (errorMessage != null) ? errorMessage : "Unknown error changing password.";
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(ProfileMenu.this, msg, "Change Password", JOptionPane.WARNING_MESSAGE);
+                        OldPassword.setText("");
+                        NewPassword.setText("");
+                        ConfirmPassword.setText("");
+                    });
+                    return;
+                }
+
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(ProfileMenu.this, "Password changed successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    OldPassword.setText("");
+                    NewPassword.setText("");
+                    ConfirmPassword.setText("");
+                });
+            }
+        }.execute();
+    }//GEN-LAST:event_SaveBtnActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JPasswordField ConfirmPassword;
     private javax.swing.JLabel Contact;
     private javax.swing.JLabel IDlabel;
     private javax.swing.JButton LogoutBtn;
-    private javax.swing.JPasswordField jPasswordField1;
-    private javax.swing.JPasswordField jPasswordField2;
-    private javax.swing.JPasswordField jPasswordField3;
+    private javax.swing.JPasswordField NewPassword;
+    private javax.swing.JPasswordField OldPassword;
+    private javax.swing.JButton SaveBtn;
     private javax.swing.JLabel nameLabel;
     private javax.swing.JLabel setContact;
     private javax.swing.JLabel setID;

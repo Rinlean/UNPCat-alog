@@ -159,19 +159,6 @@
         </Constraint>
       </Constraints>
     </Component>
-    <Component class="javax.swing.JButton" name="testcatprofilemenu">
-      <Properties>
-        <Property name="text" type="java.lang.String" value="testcatprof"/>
-      </Properties>
-      <Events>
-        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="testcatprofilemenuActionPerformed"/>
-      </Events>
-      <Constraints>
-        <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout" value="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout$AbsoluteConstraintsDescription">
-          <AbsoluteConstraints x="260" y="650" width="-1" height="-1"/>
-        </Constraint>
-      </Constraints>
-    </Component>
     <Container class="javax.swing.JPanel" name="ADpanel">
       <Properties>
         <Property name="border" type="javax.swing.border.Border" editor="org.netbeans.modules.form.editors2.BorderEditor">
@@ -184,7 +171,7 @@
       </Properties>
       <Constraints>
         <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout" value="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout$AbsoluteConstraintsDescription">
-          <AbsoluteConstraints x="10" y="420" width="350" height="220"/>
+          <AbsoluteConstraints x="10" y="420" width="350" height="180"/>
         </Constraint>
       </Constraints>
 
@@ -193,9 +180,9 @@
           <Group type="103" groupAlignment="0" attributes="0">
               <Group type="102" alignment="0" attributes="0">
                   <EmptySpace min="-2" pref="35" max="-2" attributes="0"/>
-                  <Group type="103" groupAlignment="1" attributes="0">
-                      <Component id="ADaddcat" min="-2" pref="270" max="-2" attributes="0"/>
-                      <Component id="ADeditCtakersBtn" min="-2" pref="270" max="-2" attributes="0"/>
+                  <Group type="103" groupAlignment="0" max="-2" attributes="0">
+                      <Component id="ADeditCtakersBtn" pref="270" max="32767" attributes="0"/>
+                      <Component id="testcatprofilemenu" max="32767" attributes="0"/>
                   </Group>
                   <EmptySpace min="-2" pref="35" max="-2" attributes="0"/>
               </Group>
@@ -207,7 +194,7 @@
                   <EmptySpace min="-2" pref="35" max="-2" attributes="0"/>
                   <Component id="ADeditCtakersBtn" min="-2" pref="40" max="-2" attributes="0"/>
                   <EmptySpace type="separate" max="-2" attributes="0"/>
-                  <Component id="ADaddcat" min="-2" pref="40" max="-2" attributes="0"/>
+                  <Component id="testcatprofilemenu" min="-2" pref="44" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
               </Group>
           </Group>
@@ -222,15 +209,12 @@
             </Property>
           </Properties>
         </Component>
-        <Component class="javax.swing.JButton" name="ADaddcat">
+        <Component class="javax.swing.JButton" name="testcatprofilemenu">
           <Properties>
-            <Property name="text" type="java.lang.String" value="Add Cats"/>
-            <Property name="cursor" type="java.awt.Cursor" editor="org.netbeans.modules.form.editors2.CursorEditor">
-              <Color id="Hand Cursor"/>
-            </Property>
+            <Property name="text" type="java.lang.String" value="Test Cat Profile"/>
           </Properties>
           <Events>
-            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="ADaddcatActionPerformed"/>
+            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="testcatprofilemenuActionPerformed"/>
           </Events>
         </Component>
       </SubComponents>
