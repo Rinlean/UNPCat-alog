@@ -7,7 +7,6 @@ import java.awt.event.WindowEvent;
 import java.util.logging.Level;
 import javax.swing.SwingUtilities;
 
-import com.github.sarxos.webcam.WebcamPanel;
 import java.sql.PreparedStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;

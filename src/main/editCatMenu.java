@@ -12,19 +12,6 @@ import java.awt.event.ActionEvent;
 import java.lang.reflect.Method;
 import java.sql.*;
 
-/**
- * editCatMenu: shows only cats assigned to the caretaker (accountId) unless
- * accountId == 0 (admin) in which case it shows all cats.
- *
- * This version fixes the DB error around caretaker_id by using the
- * cat_caretaker association table (the cat table does NOT have a caretaker_id
- * column in your schema). New cats created by a non-admin caretaker are now
- * inserted into cat and then associated in cat_caretaker. Filtering for a
- * caretaker uses a JOIN against cat_caretaker.
- *
- * When a cat is selected the menu attempts to update/repaint the provided
- * parent catProfileMenu (via reflection or fallback recreate).
- */
 public class editCatMenu extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(editCatMenu.class.getName());
@@ -81,7 +68,7 @@ public class editCatMenu extends javax.swing.JFrame {
         } catch (Throwable t) {
             logger.log(java.util.logging.Level.FINE, "Failed to position next to parent", t);
         }
-        
+
         setLocationRelativeTo(null);
     }
 
@@ -172,6 +159,9 @@ public class editCatMenu extends javax.swing.JFrame {
             colorField.setText("");
             areaCombo.setSelectedIndex(0);
             updateParentProfile(0);
+            // clear comment areas
+            HealthTextArea.setText("");
+            IncidentsTextArea.setText("");
         } else {
             loadCatDetails(item.id);
             updateParentProfile(item.id);
@@ -336,7 +326,64 @@ public class editCatMenu extends javax.swing.JFrame {
         }
     }
 
-    // Helper classes for combo items
+    private void refreshHealthComments(int catId) {
+        SwingUtilities.invokeLater(() -> {
+            StringBuilder sb = new StringBuilder();
+            String sql = "SELECT date, conditions FROM health_record WHERE cat_id = ? ORDER BY date DESC";
+            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, catId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    boolean first = true;
+                    while (rs.next()) {
+                        Date d = rs.getDate("date");
+                        String cond = rs.getString("conditions");
+                        if (!first) {
+                            sb.append("\n\n");
+                        }
+                        sb.append((d == null) ? "Unknown date" : d.toString());
+                        sb.append(" - ");
+                        sb.append(cond == null ? "" : cond);
+                        first = false;
+                    }
+                }
+            } catch (SQLException ex) {
+                logger.log(java.util.logging.Level.FINE, "Failed to load health comments", ex);
+                sb.append("Failed to load health comments: ").append(ex.getMessage());
+            }
+            final String out = sb.toString();
+            SwingUtilities.invokeLater(() -> HealthTextArea.setText(out));
+        });
+    }
+
+    private void refreshIncidentComments(int catId) {
+        SwingUtilities.invokeLater(() -> {
+            StringBuilder sb = new StringBuilder();
+            String sql = "SELECT date, `desc` FROM incident_report WHERE cat_id = ? ORDER BY date DESC";
+            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, catId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    boolean first = true;
+                    while (rs.next()) {
+                        Timestamp ts = rs.getTimestamp("date");
+                        String desc = rs.getString("desc");
+                        if (!first) {
+                            sb.append("\n\n");
+                        }
+                        sb.append((ts == null) ? "Unknown time" : ts.toString());
+                        sb.append(" - ");
+                        sb.append(desc == null ? "" : desc);
+                        first = false;
+                    }
+                }
+            } catch (SQLException ex) {
+                logger.log(java.util.logging.Level.FINE, "Failed to load incident comments", ex);
+                sb.append("Failed to load incident comments: ").append(ex.getMessage());
+            }
+            final String out = sb.toString();
+            SwingUtilities.invokeLater(() -> IncidentsTextArea.setText(out));
+        });
+    }
+
     private static final class CatItem {
 
         final int id;
@@ -390,9 +437,16 @@ public class editCatMenu extends javax.swing.JFrame {
         saveBtn = new javax.swing.JButton();
         jTabbedPane1 = new javax.swing.JTabbedPane();
         jPanel1 = new javax.swing.JPanel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        HealthTextArea = new javax.swing.JTextArea();
+        AddHealthCommentBtn = new javax.swing.JButton();
         jPanel2 = new javax.swing.JPanel();
+        jScrollPane2 = new javax.swing.JScrollPane();
+        IncidentsTextArea = new javax.swing.JTextArea();
+        AddIncidentCommentBtn = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setTitle("Edit Cat Menu");
         setMaximumSize(new java.awt.Dimension(400, 723));
         setPreferredSize(new java.awt.Dimension(400, 723));
         setResizable(false);
@@ -409,7 +463,7 @@ public class editCatMenu extends javax.swing.JFrame {
                 catSelectorActionPerformed(evt);
             }
         });
-        getContentPane().add(catSelector, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 30, -1, -1));
+        getContentPane().add(catSelector, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 30, 190, -1));
 
         areaCombo.setModel(new javax.swing.DefaultComboBoxModel<>());
         areaCombo.setBorder(javax.swing.BorderFactory.createTitledBorder("Area"));
@@ -432,28 +486,70 @@ public class editCatMenu extends javax.swing.JFrame {
         });
         getContentPane().add(saveBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 330, -1, -1));
 
+        HealthTextArea.setColumns(20);
+        HealthTextArea.setRows(5);
+        jScrollPane1.setViewportView(HealthTextArea);
+
+        AddHealthCommentBtn.setText("Comment");
+        AddHealthCommentBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                AddHealthCommentBtnActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 400, Short.MAX_VALUE)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(AddHealthCommentBtn)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 366, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 28, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 325, Short.MAX_VALUE)
+            .addGroup(jPanel1Layout.createSequentialGroup()
+                .addGap(18, 18, 18)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 233, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(AddHealthCommentBtn)
+                .addContainerGap(45, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Health", jPanel1);
+
+        IncidentsTextArea.setColumns(20);
+        IncidentsTextArea.setRows(5);
+        jScrollPane2.setViewportView(IncidentsTextArea);
+
+        AddIncidentCommentBtn.setText("Comment");
+        AddIncidentCommentBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                AddIncidentCommentBtnActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 400, Short.MAX_VALUE)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(AddIncidentCommentBtn)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 363, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(0, 31, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 325, Short.MAX_VALUE)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addGap(18, 18, 18)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 233, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(AddIncidentCommentBtn)
+                .addContainerGap(45, Short.MAX_VALUE))
         );
 
         jTabbedPane1.addTab("Incidents", jPanel2);
@@ -565,8 +661,78 @@ public class editCatMenu extends javax.swing.JFrame {
         onCatSelected(evt);
     }//GEN-LAST:event_catSelectorActionPerformed
 
+    private void AddHealthCommentBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddHealthCommentBtnActionPerformed
+        Object selObj = catSelector.getSelectedItem();
+        CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
+        if (sel == null || sel.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select a cat before adding a health comment.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String comment = HealthTextArea.getText();
+        if (comment == null || comment.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please type the health comment in the text area before clicking Comment.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        comment = comment.trim();
+
+        // Insert into DB
+        String insertSql = "INSERT INTO health_record (cat_id, conditions, date) VALUES (?, ?, CURRENT_DATE())";
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(insertSql)) {
+            ps.setInt(1, sel.id);
+            ps.setString(2, comment);
+            int affected = ps.executeUpdate();
+            if (affected == 0) {
+                JOptionPane.showMessageDialog(this, "Failed to add health comment.", "DB error", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Health comment added.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                // Clear the text area (we do NOT show past comments in the text area)
+                HealthTextArea.setText("");
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.SEVERE, "Failed to insert health comment", ex);
+            JOptionPane.showMessageDialog(this, "Failed to add health comment: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_AddHealthCommentBtnActionPerformed
+
+    private void AddIncidentCommentBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddIncidentCommentBtnActionPerformed
+        Object selObj = catSelector.getSelectedItem();
+        CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
+        if (sel == null || sel.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select a cat before adding an incident comment.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String comment = IncidentsTextArea.getText();
+        if (comment == null || comment.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please type the incident description in the text area before clicking Comment.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        comment = comment.trim();
+
+        String insertSql = "INSERT INTO incident_report (cat_id, date, `desc`) VALUES (?, NOW(), ?)";
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(insertSql)) {
+            ps.setInt(1, sel.id);
+            ps.setString(2, comment);
+            int affected = ps.executeUpdate();
+            if (affected == 0) {
+                JOptionPane.showMessageDialog(this, "Failed to add incident report.", "DB error", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Incident report added.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                IncidentsTextArea.setText("");
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.SEVERE, "Failed to insert incident report", ex);
+            JOptionPane.showMessageDialog(this, "Failed to add incident report: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_AddIncidentCommentBtnActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton AddHealthCommentBtn;
+    private javax.swing.JButton AddIncidentCommentBtn;
+    private javax.swing.JTextArea HealthTextArea;
+    private javax.swing.JTextArea IncidentsTextArea;
     private javax.swing.JComboBox<String> areaCombo;
     private javax.swing.JTextField breedField;
     private javax.swing.JComboBox<String> catSelector;
@@ -574,6 +740,8 @@ public class editCatMenu extends javax.swing.JFrame {
     private javax.swing.JComboBox<String> genderCombo;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JTabbedPane jTabbedPane1;
     private javax.swing.JTextField nameField;
     private javax.swing.JButton saveBtn;
