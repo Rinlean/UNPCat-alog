@@ -15,6 +15,7 @@ import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamPanel;
 import java.awt.Font;
 import java.awt.Window;
+import java.sql.SQLException;
 import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,6 +28,7 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.plaf.FontUIResource;
 import main.stuff.QRstuff;
+import main.stuff.dbconn;
 
 public class qrMenu extends javax.swing.JFrame {
 
@@ -54,6 +56,34 @@ public class qrMenu extends javax.swing.JFrame {
         this.accountType = accType;
         initComponents();
         checkAccountType();
+    }
+
+    public void applyLogin(String accId, String accType) {
+        this.accountId = accId == null ? "" : accId;
+        this.accountType = accType == null ? "" : accType;
+        // Update UI on EDT
+        SwingUtilities.invokeLater(() -> {
+            checkAccountType();
+            // Optionally update title / status to reflect logged-in user
+            if (!this.accountId.isEmpty()) {
+                try {
+                    setTitle("UNP Cat-alog - User: " + dbconn.getAccountNameById(accountId));
+                } catch (SQLException ex) {
+                    System.getLogger(qrMenu.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                }
+            } else if (this.accountId.isEmpty()){
+                setTitle("UNP Cat-alog");
+            }
+            // bring window to front so user sees the refreshed state
+            try {
+                if (!isVisible()) {
+                    setVisible(true);
+                }
+                toFront();
+                requestFocus();
+            } catch (Throwable ignored) {
+            }
+        });
     }
 
     private void startQRPrev() {
@@ -256,13 +286,13 @@ public class qrMenu extends javax.swing.JFrame {
     private void checkAccountType() {
         if (accountType.equals("admin")) {
             edcatinfoBtn.setVisible(true);
-            ADeditCtakersBtn.setVisible(true);
+            ADpanel.setVisible(true);
         } else if (accountType.equals("caretaker")) {
             edcatinfoBtn.setVisible(true);
-            ADeditCtakersBtn.setVisible(false);
-        } else if(accountType.equals("")){
+            ADpanel.setVisible(false);
+        } else if (accountType.equals("")) {
             edcatinfoBtn.setVisible(false);
-            ADeditCtakersBtn.setVisible(false);
+            ADpanel.setVisible(false);
         }
     }
 
@@ -357,7 +387,7 @@ public class qrMenu extends javax.swing.JFrame {
                 DarkToggBtnActionPerformed(evt);
             }
         });
-        getContentPane().add(DarkToggBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(150, 630, -1, -1));
+        getContentPane().add(DarkToggBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 40, -1, -1));
 
         startButton.setText("Start");
         startButton.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -366,7 +396,7 @@ public class qrMenu extends javax.swing.JFrame {
                 startButtonActionPerformed(evt);
             }
         });
-        getContentPane().add(startButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(670, 660, -1, -1));
+        getContentPane().add(startButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(510, 650, 290, -1));
 
         stopButton.setText("Stop");
         stopButton.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -375,7 +405,7 @@ public class qrMenu extends javax.swing.JFrame {
                 stopButtonActionPerformed(evt);
             }
         });
-        getContentPane().add(stopButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(840, 660, -1, -1));
+        getContentPane().add(stopButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(820, 650, 290, -1));
         stopButton.setEnabled(false);
 
         testcatprofilemenu.setText("testcatprof");
@@ -384,12 +414,14 @@ public class qrMenu extends javax.swing.JFrame {
                 testcatprofilemenuActionPerformed(evt);
             }
         });
-        getContentPane().add(testcatprofilemenu, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 680, -1, -1));
+        getContentPane().add(testcatprofilemenu, new org.netbeans.lib.awtextra.AbsoluteConstraints(260, 650, -1, -1));
+
+        ADpanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Admin Panel", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial Black", 0, 12))); // NOI18N
 
         ADeditCtakersBtn.setText("Edit Caretakers");
         ADeditCtakersBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
 
-        ADaddcat.setText("Edit Cat Profile");
+        ADaddcat.setText("Add Cats");
         ADaddcat.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         ADaddcat.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -402,23 +434,23 @@ public class qrMenu extends javax.swing.JFrame {
         ADpanelLayout.setHorizontalGroup(
             ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(ADpanelLayout.createSequentialGroup()
-                .addGap(15, 15, 15)
-                .addGroup(ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGap(35, 35, 35)
+                .addGroup(ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(ADaddcat, javax.swing.GroupLayout.PREFERRED_SIZE, 270, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 270, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(15, Short.MAX_VALUE))
+                .addGap(35, 35, 35))
         );
         ADpanelLayout.setVerticalGroup(
             ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(ADpanelLayout.createSequentialGroup()
-                .addContainerGap(39, Short.MAX_VALUE)
+                .addGap(35, 35, 35)
                 .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(27, 27, 27)
+                .addGap(18, 18, 18)
                 .addComponent(ADaddcat, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(54, 54, 54))
+                .addContainerGap())
         );
 
-        getContentPane().add(ADpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 410, 300, 200));
+        getContentPane().add(ADpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 420, 350, 220));
 
         pack();
         setLocationRelativeTo(null);
@@ -471,7 +503,7 @@ public class qrMenu extends javax.swing.JFrame {
                     ((JDialog) w).pack();
                 }
             }
-        } catch (UnsupportedLookAndFeelException ex) {
+        } catch (UnsupportedLookAndFeelException ex) {  
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this,
                     "Failed to change theme:\n" + ex.getMessage(),
@@ -481,11 +513,11 @@ public class qrMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_DarkToggBtnActionPerformed
 
     private void edcatinfoBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_edcatinfoBtnActionPerformed
-    catProfileMenu catProf = new catProfileMenu(0);
-    catProf.setVisible(true);
-    
-    editCatMenu edMenu = new editCatMenu(Integer.parseInt(accountId), catProf);
-    edMenu.setVisible(true);
+        catProfileMenu catProf = new catProfileMenu(0);
+        catProf.setVisible(true);
+
+        editCatMenu edMenu = new editCatMenu(Integer.parseInt(accountId), catProf);
+        edMenu.setVisible(true);
     }//GEN-LAST:event_edcatinfoBtnActionPerformed
 
     private void startButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startButtonActionPerformed
@@ -537,7 +569,7 @@ public class qrMenu extends javax.swing.JFrame {
             setGlobalFont(new Font("Arial", Font.PLAIN, 13));
             java.awt.EventQueue.invokeLater(() -> {
                 try {
-                    new qrMenu("","admin").setVisible(true);
+                    new qrMenu("", "").setVisible(true);
                 } catch (Throwable t) {
                     logger.log(java.util.logging.Level.SEVERE, "Failed to launch qrMenu", t);
                 }

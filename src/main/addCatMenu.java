@@ -8,14 +8,14 @@ package main;
  *
  * @author Rin
  */
-public class editCatMenu extends javax.swing.JFrame {
+public class addCatMenu extends javax.swing.JFrame {
     
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(editCatMenu.class.getName());
+    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(addCatMenu.class.getName());
 
     /**
-     * Creates new form editCatMenu
+     * Creates new form addCatMenu
      */
-    public editCatMenu() {
+    public addCatMenu() {
         initComponents();
     }
 
@@ -66,7 +66,7 @@ public class editCatMenu extends javax.swing.JFrame {
         //</editor-fold>
 
         /* Create and display the form */
-        java.awt.EventQueue.invokeLater(() -> new editCatMenu().setVisible(true));
+        java.awt.EventQueue.invokeLater(() -> new addCatMenu().setVisible(true));
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
