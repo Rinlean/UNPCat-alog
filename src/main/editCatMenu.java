@@ -5,40 +5,98 @@ import java.awt.GraphicsEnvironment;
 import java.awt.IllegalComponentStateException;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Window;
 import main.stuff.dbconn;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.lang.reflect.Method;
 import java.sql.*;
+import javax.swing.table.DefaultTableModel;
+import java.util.ArrayList;
+import java.util.List;
 
 public class editCatMenu extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(editCatMenu.class.getName());
 
     private final Integer accountId;
-    private final catProfileMenu parentProfile;
+    private volatile catProfileMenu profileWindow;
+    private final DefaultTableModel healthModel = new DefaultTableModel(new Object[]{"ID", "Date", "Conditions"}, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
+    private final DefaultTableModel incidentsModel = new DefaultTableModel(new Object[]{"ID", "Date", "Description"}, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
 
     public editCatMenu(int accountId, catProfileMenu catProf) {
         this.accountId = accountId;
-        this.parentProfile = catProf;
+        this.profileWindow = catProf;
         initComponents();
+
+        boolean isAdmin = (Integer.valueOf(0).equals(accountId));
+        ADpanel.setVisible(isAdmin);
+        defaultpanel.setVisible(!isAdmin);
+
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // delHealthComTable and delIncidentComTable use our models (first column = ID)
+                if (delHealthComTable.getColumnModel().getColumnCount() > 0) {
+                    delHealthComTable.getColumnModel().getColumn(0).setMinWidth(0);
+                    delHealthComTable.getColumnModel().getColumn(0).setMaxWidth(0);
+                    delHealthComTable.getColumnModel().getColumn(0).setPreferredWidth(0);
+                    delHealthComTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+                }
+                if (delIncidentComTable.getColumnModel().getColumnCount() > 0) {
+                    delIncidentComTable.getColumnModel().getColumn(0).setMinWidth(0);
+                    delIncidentComTable.getColumnModel().getColumn(0).setMaxWidth(0);
+                    delIncidentComTable.getColumnModel().getColumn(0).setPreferredWidth(0);
+                    delIncidentComTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+                }
+            } catch (Throwable t) {
+                logger.log(java.util.logging.Level.FINE, "Failed to configure delete tables", t);
+            }
+        });
+
         loadAreas();
         loadCats();
+        SwingUtilities.invokeLater(() -> {
+            Object sel = catSelector.getSelectedItem();
+            int catId = 0;
+            if (sel instanceof CatItem) {
+                catId = ((CatItem) sel).id;
+            }
+            loadAvailableCaretakersForCat(catId);
+            // populate delete tables for initially selected cat as well
+            if (catId > 0) {
+                populateDelHealth(catId);
+                populateDelIncidents(catId);
+            } else {
+                // clear
+                healthModel.setRowCount(0);
+                incidentsModel.setRowCount(0);
+            }
+        });
         SwingUtilities.invokeLater(this::positionNextToParent);
     }
 
     private void positionNextToParent() {
         try {
-            if (parentProfile != null && parentProfile.isDisplayable() && parentProfile.isVisible()) {
+            if (profileWindow != null && profileWindow.isDisplayable() && profileWindow.isVisible()) {
                 Point p;
                 try {
-                    p = parentProfile.getLocationOnScreen();
+                    p = profileWindow.getLocationOnScreen();
                 } catch (IllegalComponentStateException e) {
                     setLocationRelativeTo(null);
                     return;
                 }
-                Dimension pSize = parentProfile.getSize();
+                Dimension pSize = profileWindow.getSize();
                 Dimension mySize = this.getSize();
                 int margin = 10;
 
@@ -114,11 +172,9 @@ public class editCatMenu extends javax.swing.JFrame {
 
             model.addElement(new CatItem(0, "<New Cat>"));
 
-            // If accountId == 0 (admin) show all cats, otherwise show only cats tied to this caretaker
             boolean filterByCaretaker = (accountId != null && accountId != 0);
             String sql;
             if (filterByCaretaker) {
-                // join to association table cat_caretaker
                 sql = "SELECT c.cat_id, c.name FROM cat c JOIN cat_caretaker cc ON c.cat_id = cc.cat_id WHERE cc.caretaker_id = ? ORDER BY c.name";
             } else {
                 sql = "SELECT cat_id, name FROM cat ORDER BY name";
@@ -145,27 +201,120 @@ public class editCatMenu extends javax.swing.JFrame {
         });
     }
 
-    private void onCatSelected(ActionEvent evt) {
+    private void onCatSelected() {
         Object selObj = catSelector.getSelectedItem();
         CatItem item = (selObj instanceof CatItem) ? (CatItem) selObj : null;
 
         if (item == null) {
             return;
         }
+
+        final int selectedCatId = item.id;
+
+        if (selectedCatId > 0) {
+            boolean hasVisibleProfile = false;
+            for (Window w : Window.getWindows()) {
+                if (w instanceof catProfileMenu && w.isDisplayable() && w.isVisible()) {
+                    hasVisibleProfile = true;
+                    synchronized (this) {
+                        if (this.profileWindow == null || !this.profileWindow.isDisplayable()) {
+                            this.profileWindow = (catProfileMenu) w;
+                        }
+                    }
+                    break;
+                }
+            }
+            if (!hasVisibleProfile) {
+                openProfileForCat(selectedCatId);
+            }
+        }
+
         if (item.id == 0) {
             nameField.setText("");
             genderCombo.setSelectedItem("Unknown");
             breedField.setText("");
             colorField.setText("");
             areaCombo.setSelectedIndex(0);
-            updateParentProfile(0);
-            // clear comment areas
             HealthTextArea.setText("");
-            IncidentsTextArea.setText("");
+            loadAvailableCaretakersForCat(0);
+            loadDelCaretakersForCat(0);
+            healthModel.setRowCount(0);
+            incidentsModel.setRowCount(0);
+            updateParentProfile(0);
         } else {
             loadCatDetails(item.id);
+            loadAvailableCaretakersForCat(item.id);
+            loadDelCaretakersForCat(item.id);
+            populateDelHealth(item.id);
+            populateDelIncidents(item.id);
             updateParentProfile(item.id);
         }
+    }
+
+    private void openProfileForCat(int catId) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                catProfileMenu existing = this.profileWindow;
+                if (existing != null && existing.isDisplayable()) {
+                    if (tryInvokeRefreshOnProfile(existing, catId)) {
+                        try {
+                            existing.repaint();
+                        } catch (Throwable ignored) {
+                        }
+                        return;
+                    }
+                }
+
+                catProfileMenu newProf = new catProfileMenu(catId);
+                this.profileWindow = newProf;
+                newProf.setVisible(true);
+            } catch (Throwable t) {
+                logger.log(java.util.logging.Level.FINE, "Failed to open/reuse catProfileMenu for cat " + catId, t);
+            }
+        });
+    }
+
+    private boolean tryInvokeRefreshOnProfile(catProfileMenu prof, int catId) {
+        if (prof == null) {
+            return false;
+        }
+        String[] candidateNames = {"setCatId", "loadCat", "refresh", "reload", "setId", "showCat"};
+        Class<?> cls = prof.getClass();
+        for (String name : candidateNames) {
+            try {
+                Method m = cls.getMethod(name, int.class);
+                try {
+                    m.invoke(prof, catId);
+                    return true;
+                } catch (Throwable invokeErr) {
+                    logger.log(java.util.logging.Level.FINE, "Invocation of " + name + " failed", invokeErr);
+                }
+            } catch (NoSuchMethodException ignored) {
+                try {
+                    Method m2 = cls.getMethod(name, Integer.class);
+                    try {
+                        m2.invoke(prof, Integer.valueOf(catId));
+                        return true;
+                    } catch (Throwable invokeErr) {
+                        logger.log(java.util.logging.Level.FINE, "Invocation of " + name + "(Integer) failed", invokeErr);
+                    }
+                } catch (NoSuchMethodException ignored2) {
+                    try {
+                        Method m3 = cls.getMethod(name, String.class);
+                        try {
+                            m3.invoke(prof, String.valueOf(catId));
+                            return true;
+                        } catch (Throwable invokeErr) {
+                            logger.log(java.util.logging.Level.FINE, "Invocation of " + name + "(String) failed", invokeErr);
+                        }
+                    } catch (NoSuchMethodException ignored3) {
+                    }
+                }
+            } catch (Throwable t) {
+                logger.log(java.util.logging.Level.FINE, "Unexpected reflection error", t);
+            }
+        }
+        return false;
     }
 
     private void loadCatDetails(int catId) {
@@ -256,132 +405,247 @@ public class editCatMenu extends javax.swing.JFrame {
     }
 
     private void updateParentProfile(int catId) {
-        if (parentProfile == null) {
+        catProfileMenu prof = this.profileWindow;
+        if (prof != null && prof.isDisplayable()) {
+            // try to invoke refresh-like methods on the existing profile
+            if (tryInvokeRefreshOnProfile(prof, catId)) {
+                SwingUtilities.invokeLater(() -> {
+                    try {
+                        prof.repaint();
+                    } catch (Throwable ignored) {
+                    }
+                });
+                return;
+            }
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            try {
+                try {
+                    if (this.profileWindow != null) {
+                        this.profileWindow.dispose();
+                    }
+                } catch (Throwable ignored) {
+                }
+
+                catProfileMenu newProf = new catProfileMenu(catId);
+                this.profileWindow = newProf;
+                newProf.setVisible(true);
+            } catch (Throwable t) {
+                logger.log(java.util.logging.Level.FINE, "Failed to open fallback profile", t);
+            }
+        });
+    }
+
+    private void loadAvailableCaretakersForCat(int catId) {
+        SwingUtilities.invokeLater(() -> {
+            javax.swing.DefaultComboBoxModel model;
+            if (CaretakersCombo.getModel() instanceof javax.swing.DefaultComboBoxModel) {
+                model = (javax.swing.DefaultComboBoxModel) CaretakersCombo.getModel();
+                model.removeAllElements();
+            } else {
+                model = new javax.swing.DefaultComboBoxModel();
+                CaretakersCombo.setModel(model);
+            }
+
+            model.addElement(new CaretakerItem(0, "<Select a caretaker>"));
+
+            if (catId <= 0) {
+                CaretakersCombo.setSelectedIndex(0);
+                CaretakersCombo.setEnabled(false);
+                return;
+            }
+
+            CaretakersCombo.setEnabled(true);
+
+            String sql = "SELECT caretaker_id, name FROM caretaker WHERE caretaker_id NOT IN (SELECT caretaker_id FROM cat_caretaker WHERE cat_id = ?) ORDER BY name";
+
+            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, catId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        model.addElement(new CaretakerItem(rs.getInt("caretaker_id"), rs.getString("name")));
+                    }
+                }
+            } catch (SQLException ex) {
+                logger.log(java.util.logging.Level.WARNING, "Failed to load caretakers", ex);
+                JOptionPane.showMessageDialog(this, "Failed to load caretakers: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+            }
+
+            if (model.getSize() > 0) {
+                CaretakersCombo.setSelectedIndex(0);
+            }
+        });
+    }
+
+    private void loadDelCaretakersForCat(int catId) {
+        SwingUtilities.invokeLater(() -> {
+            javax.swing.DefaultComboBoxModel model;
+            if (delCaretakersCombo.getModel() instanceof javax.swing.DefaultComboBoxModel) {
+                model = (javax.swing.DefaultComboBoxModel) delCaretakersCombo.getModel();
+                model.removeAllElements();
+            } else {
+                model = new javax.swing.DefaultComboBoxModel();
+                delCaretakersCombo.setModel(model);
+            }
+
+            model.addElement(new CaretakerItem(0, "<Select a caretaker to remove>"));
+
+            if (catId <= 0) {
+                delCaretakersCombo.setSelectedIndex(0);
+                delCaretakersCombo.setEnabled(false);
+                return;
+            }
+
+            delCaretakersCombo.setEnabled(true);
+
+            String sql = "SELECT c.caretaker_id, c.name "
+                    + "FROM caretaker c "
+                    + "JOIN cat_caretaker cc ON c.caretaker_id = cc.caretaker_id "
+                    + "WHERE cc.cat_id = ? "
+                    + "ORDER BY c.name";
+            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, catId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        model.addElement(new CaretakerItem(rs.getInt("caretaker_id"), rs.getString("name")));
+                    }
+                }
+            } catch (SQLException ex) {
+                logger.log(java.util.logging.Level.WARNING, "Failed to load associated caretakers", ex);
+                SwingUtilities.invokeLater(() -> {
+                    model.removeAllElements();
+                    model.addElement(new CaretakerItem(0, "<Error loading caretakers>"));
+                });
+            }
+
+            // select the placeholder by default
+            if (model.getSize() > 0) {
+                delCaretakersCombo.setSelectedIndex(0);
+            }
+        });
+    }
+
+    private void populateDelHealth(int catId) {
+        SwingUtilities.invokeLater(() -> {
+            healthModel.setRowCount(0);
+        });
+        delHealthComTable.getTableHeader().setReorderingAllowed(false);
+        delHealthComTable.getTableHeader().setResizingAllowed(false);
+        String sql = "SELECT health_id, `date`, conditions FROM health_record WHERE cat_id = ? ORDER BY `date` DESC LIMIT 100";
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, catId);
+            try (ResultSet rs = ps.executeQuery()) {
+                List<Object[]> rows = new ArrayList<>();
+                while (rs.next()) {
+                    int id = rs.getInt("health_id");
+                    Date d = rs.getDate("date");
+                    String cond = rs.getString("conditions");
+                    rows.add(new Object[]{id, d, cond == null ? "" : cond});
+                }
+                SwingUtilities.invokeLater(() -> {
+                    healthModel.setRowCount(0);
+                    for (Object[] r : rows) {
+                        healthModel.addRow(r);
+                    }
+                });
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.WARNING, "Failed to populate health delete table", ex);
+            SwingUtilities.invokeLater(() -> {
+                healthModel.setRowCount(0);
+                healthModel.addRow(new Object[]{-1, "Error", ex.getMessage()});
+            });
+        }
+    }
+
+    private void populateDelIncidents(int catId) {
+        SwingUtilities.invokeLater(() -> {
+            incidentsModel.setRowCount(0);
+        });
+        delIncidentComTable.getTableHeader().setReorderingAllowed(false);
+        delIncidentComTable.getTableHeader().setResizingAllowed(false);
+        String sql = "SELECT incident_id, `date`, `desc` FROM incident_report WHERE cat_id = ? ORDER BY `date` DESC LIMIT 100";
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, catId);
+            try (ResultSet rs = ps.executeQuery()) {
+                List<Object[]> rows = new ArrayList<>();
+                while (rs.next()) {
+                    int id = rs.getInt("incident_id");
+                    Timestamp ts = rs.getTimestamp("date");
+                    String desc = rs.getString("desc");
+                    rows.add(new Object[]{id, ts, desc == null ? "" : desc});
+                }
+                SwingUtilities.invokeLater(() -> {
+                    incidentsModel.setRowCount(0);
+                    for (Object[] r : rows) {
+                        incidentsModel.addRow(r);
+                    }
+                });
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.WARNING, "Failed to populate incident delete table", ex);
+            SwingUtilities.invokeLater(() -> {
+                incidentsModel.setRowCount(0);
+                incidentsModel.addRow(new Object[]{-1, "Error", ex.getMessage()});
+            });
+        }
+    }
+
+    private void onAddCaretakerSelected() {
+        Object o = CaretakersCombo.getSelectedItem();
+        CaretakerItem ct = (o instanceof CaretakerItem) ? (CaretakerItem) o : null;
+        if (ct == null || ct.id == 0) {
+            addCtNameLabel.setText("Select Caretaker");
+            addCtContactLabel.setText("");
             return;
         }
 
-        String[] candidateNames = {"setCatId", "loadCat", "refresh", "reload", "setId", "showCat"};
+        addCtNameLabel.setText(ct.name == null ? "" : ct.name);
 
-        Class<?> cls = parentProfile.getClass();
-        for (String name : candidateNames) {
-            try {
-                Method m = cls.getMethod(name, int.class);
-                try {
-                    m.invoke(parentProfile, catId);
-                    SwingUtilities.invokeLater(() -> {
-                        try {
-                            parentProfile.repaint();
-                        } catch (Throwable ignored) {
-                        }
-                    });
-                    return;
-                } catch (Throwable invokeErr) {
-                    logger.log(java.util.logging.Level.FINE, "Invocation of " + name + " failed", invokeErr);
+        // Try to load contact (if such a column exists). Fail quietly and leave label blank on error.
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT contact_info FROM caretaker WHERE caretaker_id = ?")) {
+            ps.setInt(1, ct.id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String contact = rs.getString("contact_info");
+                    addCtContactLabel.setText(contact == null ? "" : contact);
+                } else {
+                    addCtContactLabel.setText("");
                 }
-            } catch (NoSuchMethodException ignored) {
-                try {
-                    Method m2 = cls.getMethod(name, Integer.class);
-                    try {
-                        m2.invoke(parentProfile, Integer.valueOf(catId));
-                        SwingUtilities.invokeLater(parentProfile::repaint);
-                        return;
-                    } catch (Throwable invokeErr) {
-                        logger.log(java.util.logging.Level.FINE, "Invocation of " + name + "(Integer) failed", invokeErr);
-                    }
-                } catch (NoSuchMethodException ignored2) {
-                    try {
-                        Method m3 = cls.getMethod(name, String.class);
-                        try {
-                            m3.invoke(parentProfile, String.valueOf(catId));
-                            SwingUtilities.invokeLater(parentProfile::repaint);
-                            return;
-                        } catch (Throwable invokeErr) {
-                            logger.log(java.util.logging.Level.FINE, "Invocation of " + name + "(String) failed", invokeErr);
-                        }
-                    } catch (NoSuchMethodException ignored3) {
-                    }
-                }
-            } catch (Throwable t) {
-                logger.log(java.util.logging.Level.FINE, "Unexpected reflection error", t);
             }
-        }
-
-        try {
-            SwingUtilities.invokeLater(() -> {
-                try {
-                    parentProfile.dispose();
-                } catch (Throwable ignored) {
-                }
-                if (catId >= 0) {
-                    try {
-                        catProfileMenu newProf = new catProfileMenu(catId);
-                        newProf.setVisible(true);
-                    } catch (Throwable t) {
-                        logger.log(java.util.logging.Level.FINE, "Failed to open fallback profile", t);
-                    }
-                }
-            });
-        } catch (Throwable t) {
-            logger.log(java.util.logging.Level.FINE, "Failed to fallback-refresh parent profile", t);
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.FINE, "Failed to load caretaker contact (add): " + ct.id, ex);
+            addCtContactLabel.setText("");
         }
     }
 
-    private void refreshHealthComments(int catId) {
-        SwingUtilities.invokeLater(() -> {
-            StringBuilder sb = new StringBuilder();
-            String sql = "SELECT date, conditions FROM health_record WHERE cat_id = ? ORDER BY date DESC";
-            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, catId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    boolean first = true;
-                    while (rs.next()) {
-                        Date d = rs.getDate("date");
-                        String cond = rs.getString("conditions");
-                        if (!first) {
-                            sb.append("\n\n");
-                        }
-                        sb.append((d == null) ? "Unknown date" : d.toString());
-                        sb.append(" - ");
-                        sb.append(cond == null ? "" : cond);
-                        first = false;
-                    }
-                }
-            } catch (SQLException ex) {
-                logger.log(java.util.logging.Level.FINE, "Failed to load health comments", ex);
-                sb.append("Failed to load health comments: ").append(ex.getMessage());
-            }
-            final String out = sb.toString();
-            SwingUtilities.invokeLater(() -> HealthTextArea.setText(out));
-        });
-    }
+    private void onDelCaretakerSelected() {
+        Object o = delCaretakersCombo.getSelectedItem();
+        CaretakerItem ct = (o instanceof CaretakerItem) ? (CaretakerItem) o : null;
+        if (ct == null || ct.id == 0) {
+            DelCtNameLabel.setText("Select Caretaker");
+            DelCtContactLabel2.setText("");
+            return;
+        }
 
-    private void refreshIncidentComments(int catId) {
-        SwingUtilities.invokeLater(() -> {
-            StringBuilder sb = new StringBuilder();
-            String sql = "SELECT date, `desc` FROM incident_report WHERE cat_id = ? ORDER BY date DESC";
-            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, catId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    boolean first = true;
-                    while (rs.next()) {
-                        Timestamp ts = rs.getTimestamp("date");
-                        String desc = rs.getString("desc");
-                        if (!first) {
-                            sb.append("\n\n");
-                        }
-                        sb.append((ts == null) ? "Unknown time" : ts.toString());
-                        sb.append(" - ");
-                        sb.append(desc == null ? "" : desc);
-                        first = false;
-                    }
+        DelCtNameLabel.setText(ct.name == null ? "" : ct.name);
+
+        // Try to load contact (if such a column exists). Fail quietly and leave label blank on error.
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT contact_info FROM caretaker WHERE caretaker_id = ?")) {
+            ps.setInt(1, ct.id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String contact = rs.getString("contact_info");
+                    DelCtContactLabel2.setText(contact == null ? "" : contact);
+                } else {
+                    DelCtContactLabel2.setText("");
                 }
-            } catch (SQLException ex) {
-                logger.log(java.util.logging.Level.FINE, "Failed to load incident comments", ex);
-                sb.append("Failed to load incident comments: ").append(ex.getMessage());
             }
-            final String out = sb.toString();
-            SwingUtilities.invokeLater(() -> IncidentsTextArea.setText(out));
-        });
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.FINE, "Failed to load caretaker contact (del): " + ct.id, ex);
+            DelCtContactLabel2.setText("");
+        }
     }
 
     private static final class CatItem {
@@ -419,6 +683,25 @@ public class editCatMenu extends javax.swing.JFrame {
         }
     }
 
+    private static final class CaretakerItem {
+
+        final int id;
+        final String name;
+
+        CaretakerItem(int id, String name) {
+            this.id = id;
+            this.name = (name == null) ? "" : name;
+        }
+
+        @Override
+        public String toString() {
+            if (id == 0) {
+                return name;
+            }
+            return id + " - " + name;
+        }
+    }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -428,33 +711,136 @@ public class editCatMenu extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        genderCombo = new javax.swing.JComboBox<>();
-        catSelector = new javax.swing.JComboBox<>();
-        areaCombo = new javax.swing.JComboBox<>();
-        nameField = new javax.swing.JTextField();
-        breedField = new javax.swing.JTextField();
-        colorField = new javax.swing.JTextField();
-        saveBtn = new javax.swing.JButton();
-        jTabbedPane1 = new javax.swing.JTabbedPane();
-        jPanel1 = new javax.swing.JPanel();
+        CommentsPanel = new javax.swing.JTabbedPane();
+        healthPanel = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         HealthTextArea = new javax.swing.JTextArea();
         AddHealthCommentBtn = new javax.swing.JButton();
-        jPanel2 = new javax.swing.JPanel();
+        incidentsPanel = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
         IncidentsTextArea = new javax.swing.JTextArea();
         AddIncidentCommentBtn = new javax.swing.JButton();
+        delCommentsPanel = new javax.swing.JPanel();
+        jScrollPane3 = new javax.swing.JScrollPane();
+        delIncidentComTable = new javax.swing.JTable();
+        jScrollPane4 = new javax.swing.JScrollPane();
+        delHealthComTable = new javax.swing.JTable();
+        DeleteCommentsButton = new javax.swing.JButton();
+        InfoPanel = new javax.swing.JTabbedPane();
+        BasicInfoPanel = new javax.swing.JPanel();
+        colorField = new javax.swing.JTextField();
+        breedField = new javax.swing.JTextField();
+        nameField = new javax.swing.JTextField();
+        areaCombo = new javax.swing.JComboBox<>();
+        catSelector = new javax.swing.JComboBox<>();
+        genderCombo = new javax.swing.JComboBox<>();
+        saveBtn = new javax.swing.JButton();
+        AdoptionPanel = new javax.swing.JPanel();
+        statusComboBox = new javax.swing.JComboBox<>();
+        jButton1 = new javax.swing.JButton();
+        BehaviourPanel = new javax.swing.JPanel();
+        caretakerPanel = new javax.swing.JLayeredPane();
+        ADpanel = new javax.swing.JPanel();
+        DelCaretakerPanel = new javax.swing.JPanel();
+        delCaretakerBtn = new javax.swing.JButton();
+        delCaretakersCombo = new javax.swing.JComboBox<>();
+        DelCtNameLabel = new javax.swing.JLabel();
+        DelCtContactLabel2 = new javax.swing.JLabel();
+        AddCaretakerPanel = new javax.swing.JPanel();
+        CaretakersCombo = new javax.swing.JComboBox<>();
+        addCaretakerBtn = new javax.swing.JButton();
+        addCtContactLabel = new javax.swing.JLabel();
+        addCtNameLabel = new javax.swing.JLabel();
+        defaultpanel = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle("Edit Cat Menu");
-        setMaximumSize(new java.awt.Dimension(400, 723));
-        setPreferredSize(new java.awt.Dimension(400, 723));
+        setMaximumSize(new java.awt.Dimension(420, 740));
+        setPreferredSize(new java.awt.Dimension(415, 780));
         setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
-        genderCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"Male", "Female", "Unknown"}));
-        genderCombo.setBorder(javax.swing.BorderFactory.createTitledBorder("Gender"));
-        getContentPane().add(genderCombo, new org.netbeans.lib.awtextra.AbsoluteConstraints(240, 30, 130, -1));
+        healthPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        HealthTextArea.setColumns(20);
+        HealthTextArea.setRows(5);
+        HealthTextArea.setBorder(javax.swing.BorderFactory.createTitledBorder("Health Comment"));
+        jScrollPane1.setViewportView(HealthTextArea);
+
+        healthPanel.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(9, 18, 380, 233));
+
+        AddHealthCommentBtn.setText("Comment");
+        AddHealthCommentBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                AddHealthCommentBtnActionPerformed(evt);
+            }
+        });
+        healthPanel.add(AddHealthCommentBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(288, 257, -1, -1));
+
+        CommentsPanel.addTab("Health", healthPanel);
+
+        incidentsPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        IncidentsTextArea.setColumns(20);
+        IncidentsTextArea.setRows(5);
+        IncidentsTextArea.setBorder(javax.swing.BorderFactory.createTitledBorder("Incident Comment"));
+        jScrollPane2.setViewportView(IncidentsTextArea);
+
+        incidentsPanel.add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(9, 18, 380, 233));
+
+        AddIncidentCommentBtn.setText("Comment");
+        AddIncidentCommentBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                AddIncidentCommentBtnActionPerformed(evt);
+            }
+        });
+        incidentsPanel.add(AddIncidentCommentBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(285, 257, -1, -1));
+
+        CommentsPanel.addTab("Incidents", incidentsPanel);
+
+        delCommentsPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jScrollPane3.setBorder(javax.swing.BorderFactory.createTitledBorder("Incident Comments"));
+
+        delIncidentComTable.setModel(incidentsModel);
+        jScrollPane3.setViewportView(delIncidentComTable);
+
+        delCommentsPanel.add(jScrollPane3, new org.netbeans.lib.awtextra.AbsoluteConstraints(9, 140, 380, 123));
+
+        jScrollPane4.setBorder(javax.swing.BorderFactory.createTitledBorder("Health Comments"));
+
+        delHealthComTable.setModel(healthModel);
+        jScrollPane4.setViewportView(delHealthComTable);
+
+        delCommentsPanel.add(jScrollPane4, new org.netbeans.lib.awtextra.AbsoluteConstraints(9, 13, 380, 123));
+
+        DeleteCommentsButton.setText("Delete");
+        DeleteCommentsButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                DeleteCommentsButtonActionPerformed(evt);
+            }
+        });
+        delCommentsPanel.add(DeleteCommentsButton, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 270, -1, -1));
+
+        CommentsPanel.addTab("Delete Comments", delCommentsPanel);
+
+        getContentPane().add(CommentsPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 400, 400, 340));
+
+        BasicInfoPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        colorField.setBorder(javax.swing.BorderFactory.createTitledBorder("Color"));
+        BasicInfoPanel.add(colorField, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 210, 340, -1));
+
+        breedField.setBorder(javax.swing.BorderFactory.createTitledBorder("Breed"));
+        BasicInfoPanel.add(breedField, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 150, 340, -1));
+
+        nameField.setBorder(javax.swing.BorderFactory.createTitledBorder("Name"));
+        BasicInfoPanel.add(nameField, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 90, 340, -1));
+
+        areaCombo.setModel(new javax.swing.DefaultComboBoxModel<>());
+        areaCombo.setBorder(javax.swing.BorderFactory.createTitledBorder("Area"));
+        BasicInfoPanel.add(areaCombo, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 270, 340, -1));
 
         catSelector.setModel(new javax.swing.DefaultComboBoxModel());
         catSelector.setBorder(javax.swing.BorderFactory.createTitledBorder("Cats"));
@@ -463,20 +849,11 @@ public class editCatMenu extends javax.swing.JFrame {
                 catSelectorActionPerformed(evt);
             }
         });
-        getContentPane().add(catSelector, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 30, 190, -1));
+        BasicInfoPanel.add(catSelector, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 30, 190, -1));
 
-        areaCombo.setModel(new javax.swing.DefaultComboBoxModel<>());
-        areaCombo.setBorder(javax.swing.BorderFactory.createTitledBorder("Area"));
-        getContentPane().add(areaCombo, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 270, 340, -1));
-
-        nameField.setBorder(javax.swing.BorderFactory.createTitledBorder("Name"));
-        getContentPane().add(nameField, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 90, 340, -1));
-
-        breedField.setBorder(javax.swing.BorderFactory.createTitledBorder("Breed"));
-        getContentPane().add(breedField, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 150, 340, -1));
-
-        colorField.setBorder(javax.swing.BorderFactory.createTitledBorder("Color"));
-        getContentPane().add(colorField, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 210, 340, -1));
+        genderCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"Male", "Female", "Unknown"}));
+        genderCombo.setBorder(javax.swing.BorderFactory.createTitledBorder("Gender"));
+        BasicInfoPanel.add(genderCombo, new org.netbeans.lib.awtextra.AbsoluteConstraints(240, 30, 130, -1));
 
         saveBtn.setText("Save");
         saveBtn.addActionListener(new java.awt.event.ActionListener() {
@@ -484,77 +861,112 @@ public class editCatMenu extends javax.swing.JFrame {
                 saveBtnActionPerformed(evt);
             }
         });
-        getContentPane().add(saveBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 330, -1, -1));
+        BasicInfoPanel.add(saveBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 330, -1, -1));
 
-        HealthTextArea.setColumns(20);
-        HealthTextArea.setRows(5);
-        jScrollPane1.setViewportView(HealthTextArea);
+        InfoPanel.addTab("Basic Info", BasicInfoPanel);
 
-        AddHealthCommentBtn.setText("Comment");
-        AddHealthCommentBtn.addActionListener(new java.awt.event.ActionListener() {
+        AdoptionPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        statusComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        AdoptionPanel.add(statusComboBox, new org.netbeans.lib.awtextra.AbsoluteConstraints(62, 31, -1, -1));
+
+        jButton1.setText("jButton1");
+        AdoptionPanel.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(276, 266, -1, -1));
+
+        InfoPanel.addTab("Adoption", AdoptionPanel);
+
+        BehaviourPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+        InfoPanel.addTab("Behaviour", BehaviourPanel);
+
+        caretakerPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        ADpanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        DelCaretakerPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Delete Caretaker"));
+        DelCaretakerPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        delCaretakerBtn.setText("Delete");
+        delCaretakerBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                AddHealthCommentBtnActionPerformed(evt);
+                delCaretakerBtnActionPerformed(evt);
             }
         });
+        DelCaretakerPanel.add(delCaretakerBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 30, -1, -1));
 
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(AddHealthCommentBtn)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 366, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(0, 28, Short.MAX_VALUE))
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel1Layout.createSequentialGroup()
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 233, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(AddHealthCommentBtn)
-                .addContainerGap(45, Short.MAX_VALUE))
-        );
-
-        jTabbedPane1.addTab("Health", jPanel1);
-
-        IncidentsTextArea.setColumns(20);
-        IncidentsTextArea.setRows(5);
-        jScrollPane2.setViewportView(IncidentsTextArea);
-
-        AddIncidentCommentBtn.setText("Comment");
-        AddIncidentCommentBtn.addActionListener(new java.awt.event.ActionListener() {
+        delCaretakersCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        delCaretakersCombo.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                AddIncidentCommentBtnActionPerformed(evt);
+                delCaretakersComboActionPerformed(evt);
             }
         });
+        DelCaretakerPanel.add(delCaretakersCombo, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 30, 220, -1));
 
-        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
-        jPanel2.setLayout(jPanel2Layout);
-        jPanel2Layout.setHorizontalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(AddIncidentCommentBtn)
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 363, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(0, 31, Short.MAX_VALUE))
+        DelCtNameLabel.setText("Select Caretaker");
+        DelCtNameLabel.setBorder(javax.swing.BorderFactory.createTitledBorder("Name"));
+        DelCaretakerPanel.add(DelCtNameLabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 60, 300, -1));
+
+        DelCtContactLabel2.setText("Select Caretaker");
+        DelCtContactLabel2.setBorder(javax.swing.BorderFactory.createTitledBorder("Contact"));
+        DelCaretakerPanel.add(DelCtContactLabel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 100, 300, -1));
+
+        ADpanel.add(DelCaretakerPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 190, 350, 160));
+
+        AddCaretakerPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Add Caretaker"));
+        AddCaretakerPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        CaretakersCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+        CaretakersCombo.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                CaretakersComboActionPerformed(evt);
+            }
+        });
+        AddCaretakerPanel.add(CaretakersCombo, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 30, 220, -1));
+
+        addCaretakerBtn.setText("Add");
+        addCaretakerBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                addCaretakerBtnActionPerformed(evt);
+            }
+        });
+        AddCaretakerPanel.add(addCaretakerBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(250, 30, -1, -1));
+
+        addCtContactLabel.setText("Select Caretaker");
+        addCtContactLabel.setBorder(javax.swing.BorderFactory.createTitledBorder("Contact"));
+        AddCaretakerPanel.add(addCtContactLabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 100, 300, -1));
+
+        addCtNameLabel.setText("Select Caretaker");
+        addCtNameLabel.setBorder(javax.swing.BorderFactory.createTitledBorder("Name"));
+        AddCaretakerPanel.add(addCtNameLabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 60, 300, -1));
+
+        ADpanel.add(AddCaretakerPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 20, 350, 160));
+
+        caretakerPanel.setLayer(ADpanel, javax.swing.JLayeredPane.DRAG_LAYER);
+        caretakerPanel.add(ADpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 400, 360));
+
+        jLabel1.setText("Contact Admin to Add or Remove Co-Caretakers");
+
+        javax.swing.GroupLayout defaultpanelLayout = new javax.swing.GroupLayout(defaultpanel);
+        defaultpanel.setLayout(defaultpanelLayout);
+        defaultpanelLayout.setHorizontalGroup(
+            defaultpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(defaultpanelLayout.createSequentialGroup()
+                .addGap(71, 71, 71)
+                .addComponent(jLabel1)
+                .addContainerGap(71, Short.MAX_VALUE))
         );
-        jPanel2Layout.setVerticalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 233, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(AddIncidentCommentBtn)
-                .addContainerGap(45, Short.MAX_VALUE))
+        defaultpanelLayout.setVerticalGroup(
+            defaultpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(defaultpanelLayout.createSequentialGroup()
+                .addGap(167, 167, 167)
+                .addComponent(jLabel1)
+                .addContainerGap(177, Short.MAX_VALUE))
         );
 
-        jTabbedPane1.addTab("Incidents", jPanel2);
+        caretakerPanel.add(defaultpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 400, 360));
 
-        getContentPane().add(jTabbedPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 360, 400, 360));
+        InfoPanel.addTab("Caretaker", caretakerPanel);
+
+        getContentPane().add(InfoPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 400, 400));
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
@@ -658,7 +1070,7 @@ public class editCatMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_saveBtnActionPerformed
 
     private void catSelectorActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_catSelectorActionPerformed
-        onCatSelected(evt);
+        onCatSelected();
     }//GEN-LAST:event_catSelectorActionPerformed
 
     private void AddHealthCommentBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddHealthCommentBtnActionPerformed
@@ -686,8 +1098,14 @@ public class editCatMenu extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, "Failed to add health comment.", "DB error", JOptionPane.ERROR_MESSAGE);
             } else {
                 JOptionPane.showMessageDialog(this, "Health comment added.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                // Clear the text area (we do NOT show past comments in the text area)
                 HealthTextArea.setText("");
+                populateDelHealth(sel.id);
+                // ensure profile window refreshes to reflect new comment
+                try {
+                    updateParentProfile(sel.id);
+                } catch (Throwable t) {
+                    logger.log(java.util.logging.Level.FINE, "Failed to update profile after adding health comment", t);
+                }
             }
         } catch (SQLException ex) {
             logger.log(java.util.logging.Level.SEVERE, "Failed to insert health comment", ex);
@@ -720,6 +1138,13 @@ public class editCatMenu extends javax.swing.JFrame {
             } else {
                 JOptionPane.showMessageDialog(this, "Incident report added.", "Success", JOptionPane.INFORMATION_MESSAGE);
                 IncidentsTextArea.setText("");
+                populateDelIncidents(sel.id);
+                // refresh profile window to show new incident
+                try {
+                    updateParentProfile(sel.id);
+                } catch (Throwable t) {
+                    logger.log(java.util.logging.Level.FINE, "Failed to update profile after adding incident", t);
+                }
             }
         } catch (SQLException ex) {
             logger.log(java.util.logging.Level.SEVERE, "Failed to insert incident report", ex);
@@ -727,23 +1152,274 @@ public class editCatMenu extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_AddIncidentCommentBtnActionPerformed
 
+    private void delCaretakerBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_delCaretakerBtnActionPerformed
+        Object selObj = catSelector.getSelectedItem();
+        CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
+        Object cObj = delCaretakersCombo.getSelectedItem();
+        CaretakerItem ct = (cObj instanceof CaretakerItem) ? (CaretakerItem) cObj : null;
+
+        if (sel == null || sel.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select a cat first.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (ct == null || ct.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select a caretaker to remove.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Remove caretaker \"" + ct.name + "\" from cat \"" + sel.name + "\"?",
+                "Confirm remove",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        String sql = "DELETE FROM cat_caretaker WHERE cat_id = ? AND caretaker_id = ?";
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, sel.id);
+            ps.setInt(2, ct.id);
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                JOptionPane.showMessageDialog(this, "Caretaker removed.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                loadAvailableCaretakersForCat(sel.id);
+                loadDelCaretakersForCat(sel.id);
+                updateParentProfile(sel.id);
+            } else {
+                JOptionPane.showMessageDialog(this, "No association removed (it may have already been removed).", "Info", JOptionPane.INFORMATION_MESSAGE);
+                loadAvailableCaretakersForCat(sel.id);
+                loadDelCaretakersForCat(sel.id);
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.WARNING, "Failed to remove caretaker association", ex);
+            JOptionPane.showMessageDialog(this, "Failed to remove caretaker: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+            loadAvailableCaretakersForCat(sel.id);
+            loadDelCaretakersForCat(sel.id);
+        }
+    }//GEN-LAST:event_delCaretakerBtnActionPerformed
+
+    private void DeleteCommentsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DeleteCommentsButtonActionPerformed
+        Object selObj = catSelector.getSelectedItem();
+        CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
+        if (sel == null || sel.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select a cat first.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int catId = sel.id;
+
+        // collect health IDs
+        int[] selectedHealthRows = delHealthComTable.getSelectedRows();
+        List<Integer> healthIds = new ArrayList<>();
+        for (int viewRow : selectedHealthRows) {
+            int modelRow = delHealthComTable.convertRowIndexToModel(viewRow);
+            Object val = healthModel.getValueAt(modelRow, 0);
+            if (val instanceof Number) {
+                healthIds.add(((Number) val).intValue());
+            } else if (val != null) {
+                try {
+                    healthIds.add(Integer.parseInt(val.toString()));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+        // collect incident IDs
+        int[] selectedIncidentRows = delIncidentComTable.getSelectedRows();
+        List<Integer> incidentIds = new ArrayList<>();
+        for (int viewRow : selectedIncidentRows) {
+            int modelRow = delIncidentComTable.convertRowIndexToModel(viewRow);
+            Object val = incidentsModel.getValueAt(modelRow, 0);
+            if (val instanceof Number) {
+                incidentIds.add(((Number) val).intValue());
+            } else if (val != null) {
+                try {
+                    incidentIds.add(Integer.parseInt(val.toString()));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+        if (healthIds.isEmpty() && incidentIds.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select one or more comments to delete.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Confirm deletion
+        int total = healthIds.size() + incidentIds.size();
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Delete " + total + " selected comment(s)? This cannot be undone.",
+                "Confirm delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        int deletedHealth = 0;
+        int deletedIncidents = 0;
+
+        // perform deletes in transactions
+        try (Connection conn = dbconn.getConnection()) {
+            try {
+                conn.setAutoCommit(false);
+
+                if (!healthIds.isEmpty()) {
+                    String deleteHealthSql = "DELETE FROM health_record WHERE health_id = ?";
+                    try (PreparedStatement ps = conn.prepareStatement(deleteHealthSql)) {
+                        for (Integer id : healthIds) {
+                            ps.setInt(1, id);
+                            deletedHealth += ps.executeUpdate();
+                        }
+                    }
+                }
+
+                if (!incidentIds.isEmpty()) {
+                    String deleteIncSql = "DELETE FROM incident_report WHERE incident_id = ?";
+                    try (PreparedStatement ps = conn.prepareStatement(deleteIncSql)) {
+                        for (Integer id : incidentIds) {
+                            ps.setInt(1, id);
+                            deletedIncidents += ps.executeUpdate();
+                        }
+                    }
+                }
+
+                conn.commit();
+            } catch (SQLException ex) {
+                try {
+                    conn.rollback();
+                } catch (Throwable ignored) {
+                }
+                throw ex;
+            } finally {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (Throwable ignored) {
+                }
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.SEVERE, "Failed to delete comments", ex);
+            JOptionPane.showMessageDialog(this, "Failed to delete comments: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+            // refresh tables to keep UI consistent
+            populateDelHealth(catId);
+            populateDelIncidents(catId);
+            return;
+        }
+
+        // success feedback and refresh
+        String msg = "Deleted " + deletedHealth + " health comment(s), " + deletedIncidents + " incident(s).";
+        JOptionPane.showMessageDialog(this, msg, "Deleted", JOptionPane.INFORMATION_MESSAGE);
+        populateDelHealth(catId);
+        populateDelIncidents(catId);
+
+        // refresh profile window so deletions are reflected
+        try {
+            updateParentProfile(catId);
+        } catch (Throwable t) {
+            logger.log(java.util.logging.Level.FINE, "Failed to update profile after deleting comments", t);
+        }
+    }//GEN-LAST:event_DeleteCommentsButtonActionPerformed
+
+    private void addCaretakerBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addCaretakerBtnActionPerformed
+        Object selObj = catSelector.getSelectedItem();
+        CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
+        // Try to use CaretakersCombo1 if present (fallback to CaretakersCombo)
+        Object caretakersComboObj = null;
+        try {
+            caretakersComboObj = this.getClass().getDeclaredField("CaretakersCombo") != null ? CaretakersCombo.getSelectedItem() : null;
+        } catch (Throwable ignored) {
+        }
+        Object cObj = caretakersComboObj;
+        CaretakerItem ct = (cObj instanceof CaretakerItem) ? (CaretakerItem) cObj : null;
+
+        if (sel == null || sel.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select an existing cat before adding a caretaker.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (ct == null || ct.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select a caretaker to add.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String insertSql = "INSERT INTO cat_caretaker (cat_id, caretaker_id) VALUES (?, ?)";
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(insertSql)) {
+            ps.setInt(1, sel.id);
+            ps.setInt(2, ct.id);
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                JOptionPane.showMessageDialog(this, "Caretaker added to cat.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                // Refresh both add/remove lists so UI stays consistent
+                loadAvailableCaretakersForCat(sel.id);
+                loadDelCaretakersForCat(sel.id);
+                updateParentProfile(sel.id);
+            } else {
+                JOptionPane.showMessageDialog(this, "No association created.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.WARNING, "Failed to insert cat_caretaker", ex);
+            String msg = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
+            if (msg.contains("duplicate") || msg.contains("unique") || msg.contains("constraint")) {
+                JOptionPane.showMessageDialog(this, "That caretaker is already associated with this cat.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                // Keep UI consistent
+                loadAvailableCaretakersForCat(sel.id);
+                loadDelCaretakersForCat(sel.id);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to add caretaker: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }//GEN-LAST:event_addCaretakerBtnActionPerformed
+
+    private void CaretakersComboActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_CaretakersComboActionPerformed
+        onAddCaretakerSelected();
+    }//GEN-LAST:event_CaretakersComboActionPerformed
+
+    private void delCaretakersComboActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_delCaretakersComboActionPerformed
+        onDelCaretakerSelected();
+    }//GEN-LAST:event_delCaretakersComboActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JPanel ADpanel;
+    private javax.swing.JPanel AddCaretakerPanel;
     private javax.swing.JButton AddHealthCommentBtn;
     private javax.swing.JButton AddIncidentCommentBtn;
+    private javax.swing.JPanel AdoptionPanel;
+    private javax.swing.JPanel BasicInfoPanel;
+    private javax.swing.JPanel BehaviourPanel;
+    private javax.swing.JComboBox<String> CaretakersCombo;
+    private javax.swing.JTabbedPane CommentsPanel;
+    private javax.swing.JPanel DelCaretakerPanel;
+    private javax.swing.JLabel DelCtContactLabel2;
+    private javax.swing.JLabel DelCtNameLabel;
+    private javax.swing.JButton DeleteCommentsButton;
     private javax.swing.JTextArea HealthTextArea;
     private javax.swing.JTextArea IncidentsTextArea;
+    private javax.swing.JTabbedPane InfoPanel;
+    private javax.swing.JButton addCaretakerBtn;
+    private javax.swing.JLabel addCtContactLabel;
+    private javax.swing.JLabel addCtNameLabel;
     private javax.swing.JComboBox<String> areaCombo;
     private javax.swing.JTextField breedField;
+    private javax.swing.JLayeredPane caretakerPanel;
     private javax.swing.JComboBox<String> catSelector;
     private javax.swing.JTextField colorField;
+    private javax.swing.JPanel defaultpanel;
+    private javax.swing.JButton delCaretakerBtn;
+    private javax.swing.JComboBox<String> delCaretakersCombo;
+    private javax.swing.JPanel delCommentsPanel;
+    private javax.swing.JTable delHealthComTable;
+    private javax.swing.JTable delIncidentComTable;
     private javax.swing.JComboBox<String> genderCombo;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JPanel jPanel2;
+    private javax.swing.JPanel healthPanel;
+    private javax.swing.JPanel incidentsPanel;
+    private javax.swing.JButton jButton1;
+    private javax.swing.JLabel jLabel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
-    private javax.swing.JTabbedPane jTabbedPane1;
+    private javax.swing.JScrollPane jScrollPane3;
+    private javax.swing.JScrollPane jScrollPane4;
     private javax.swing.JTextField nameField;
     private javax.swing.JButton saveBtn;
+    private javax.swing.JComboBox<String> statusComboBox;
     // End of variables declaration//GEN-END:variables
 }

@@ -90,17 +90,10 @@ public class catProfileMenu extends javax.swing.JFrame {
         }
     }
 
-    /**
-     * Returns the currently displayed cat id (or -1 if none).
-     */
     public int getCurrentCatId() {
         return this.catId > 0 ? this.catId : -1;
     }
 
-    /**
-     * Public method to request an immediate refresh of the current cat's data.
-     * Useful when external UI (like editCatMenu) wants the profile to repaint.
-     */
     public void refreshProfile() {
         if (this.catId > 0) {
             fetchAndPopulate();
@@ -433,16 +426,19 @@ public class catProfileMenu extends javax.swing.JFrame {
         getContentPane().add(adoptionPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(360, 0, 360, 220));
 
         tblHealth.setModel(healthModel);
+        tblHealth.setRowSelectionAllowed(false);
         healthScroll.setViewportView(tblHealth);
 
         jTabbedPane1.addTab("Health", healthScroll);
 
         tblIncidents.setModel(incidentsModel);
+        tblIncidents.setRowSelectionAllowed(false);
         incidentScroll.setViewportView(tblIncidents);
 
         jTabbedPane1.addTab("Incidents", incidentScroll);
 
         tblCaretakers.setModel(caretakersModel);
+        tblCaretakers.setRowSelectionAllowed(false);
         CaretakerScroll.setViewportView(tblCaretakers);
 
         jTabbedPane1.addTab("Caretaker", CaretakerScroll);
