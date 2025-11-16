@@ -7,9 +7,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Window;
 import main.stuff.dbconn;
-
 import javax.swing.*;
-import java.awt.event.ActionEvent;
 import java.lang.reflect.Method;
 import java.sql.*;
 import javax.swing.table.DefaultTableModel;
@@ -407,7 +405,7 @@ public class editCatMenu extends javax.swing.JFrame {
     private void updateParentProfile(int catId) {
         catProfileMenu prof = this.profileWindow;
         if (prof != null && prof.isDisplayable()) {
-            // try to invoke refresh-like methods on the existing profile
+            // try to invoke refresh-like methods on the existing tracked profile
             if (tryInvokeRefreshOnProfile(prof, catId)) {
                 SwingUtilities.invokeLater(() -> {
                     try {
@@ -419,11 +417,15 @@ public class editCatMenu extends javax.swing.JFrame {
             }
         }
 
+        // Fallback: create a new profile window (best-effort)
         SwingUtilities.invokeLater(() -> {
             try {
                 try {
                     if (this.profileWindow != null) {
-                        this.profileWindow.dispose();
+                        try {
+                            this.profileWindow.dispose();
+                        } catch (Throwable ignored) {
+                        }
                     }
                 } catch (Throwable ignored) {
                 }
@@ -1071,6 +1073,15 @@ public class editCatMenu extends javax.swing.JFrame {
 
     private void catSelectorActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_catSelectorActionPerformed
         onCatSelected();
+        Object selObj = catSelector.getSelectedItem();
+        CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
+        if (sel == null || sel.id == 0) {
+            // No existing cat selected (new cat) — show "Add"
+            saveBtn.setText("Add");
+        } else {
+            // Existing cat selected — show "Save" (update)
+            saveBtn.setText("Save");
+        }
     }//GEN-LAST:event_catSelectorActionPerformed
 
     private void AddHealthCommentBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_AddHealthCommentBtnActionPerformed
