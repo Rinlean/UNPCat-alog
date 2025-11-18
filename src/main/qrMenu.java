@@ -266,7 +266,9 @@ public class qrMenu extends javax.swing.JFrame {
     private void updateMenusForRole() {
         boolean isAdmin = accountRole == Role.ADMIN;
         boolean isCaretaker = accountRole == Role.CARETAKER;
+        boolean isGuest = accountRole == Role.GUEST;
 
+        adoptBtn.setVisible(isGuest);
         edcatinfoBtn.setVisible(isAdmin || isCaretaker);
         ADpanel.setVisible(isAdmin);
     }
@@ -305,6 +307,7 @@ public class qrMenu extends javax.swing.JFrame {
         ADpanel = new javax.swing.JPanel();
         ADeditCtakersBtn = new javax.swing.JButton();
         testcatprofilemenu = new javax.swing.JButton();
+        adoptBtn = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("UNP Cat-alog");
@@ -345,7 +348,7 @@ public class qrMenu extends javax.swing.JFrame {
                 MapBtnActionPerformed(evt);
             }
         });
-        getContentPane().add(MapBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 330, 270, 40));
+        getContentPane().add(MapBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 270, 270, 40));
 
         edcatinfoBtn.setText("Edit Cat Profile");
         edcatinfoBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -354,7 +357,7 @@ public class qrMenu extends javax.swing.JFrame {
                 edcatinfoBtnActionPerformed(evt);
             }
         });
-        getContentPane().add(edcatinfoBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 270, 270, 40));
+        getContentPane().add(edcatinfoBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 210, 270, 40));
 
         DarkToggBtn.setText("Dark Mode");
         DarkToggBtn.addActionListener(new java.awt.event.ActionListener() {
@@ -387,6 +390,11 @@ public class qrMenu extends javax.swing.JFrame {
 
         ADeditCtakersBtn.setText("Edit Caretakers");
         ADeditCtakersBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        ADeditCtakersBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ADeditCtakersBtnActionPerformed(evt);
+            }
+        });
 
         testcatprofilemenu.setText("Test Cat Profile");
         testcatprofilemenu.addActionListener(new java.awt.event.ActionListener() {
@@ -409,7 +417,7 @@ public class qrMenu extends javax.swing.JFrame {
         ADpanelLayout.setVerticalGroup(
             ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(ADpanelLayout.createSequentialGroup()
-                .addGap(35, 35, 35)
+                .addGap(22, 22, 22)
                 .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addComponent(testcatprofilemenu, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -417,6 +425,15 @@ public class qrMenu extends javax.swing.JFrame {
         );
 
         getContentPane().add(ADpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 420, 350, 180));
+
+        adoptBtn.setText("Want to adopt a cat?");
+        adoptBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        adoptBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                adoptBtnActionPerformed(evt);
+            }
+        });
+        getContentPane().add(adoptBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 330, 270, 40));
 
         pack();
         setLocationRelativeTo(null);
@@ -542,6 +559,15 @@ public class qrMenu extends javax.swing.JFrame {
         catProfileMenu.testMenu();
     }//GEN-LAST:event_testcatprofilemenuActionPerformed
 
+    private void ADeditCtakersBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ADeditCtakersBtnActionPerformed
+        editCaretakersMenu edCaretakersMenu = new editCaretakersMenu();
+        edCaretakersMenu.setVisible(true);
+    }//GEN-LAST:event_ADeditCtakersBtnActionPerformed
+
+    private void adoptBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_adoptBtnActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_adoptBtnActionPerformed
+
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
@@ -566,6 +592,7 @@ public class qrMenu extends javax.swing.JFrame {
     private javax.swing.JToggleButton DarkToggBtn;
     private javax.swing.JButton MapBtn;
     private javax.swing.JButton ProfBtn;
+    private javax.swing.JButton adoptBtn;
     private javax.swing.JButton edcatinfoBtn;
     private javax.swing.JButton startButton;
     private javax.swing.JButton stopButton;

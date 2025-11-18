@@ -739,7 +739,7 @@ public class editCatMenu extends javax.swing.JFrame {
         saveBtn = new javax.swing.JButton();
         AdoptionPanel = new javax.swing.JPanel();
         statusComboBox = new javax.swing.JComboBox<>();
-        jButton1 = new javax.swing.JButton();
+        SaveAdoptionBtn = new javax.swing.JButton();
         BehaviourPanel = new javax.swing.JPanel();
         caretakerPanel = new javax.swing.JLayeredPane();
         ADpanel = new javax.swing.JPanel();
@@ -872,8 +872,13 @@ public class editCatMenu extends javax.swing.JFrame {
         statusComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
         AdoptionPanel.add(statusComboBox, new org.netbeans.lib.awtextra.AbsoluteConstraints(62, 31, -1, -1));
 
-        jButton1.setText("jButton1");
-        AdoptionPanel.add(jButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(276, 266, -1, -1));
+        SaveAdoptionBtn.setText("Save");
+        SaveAdoptionBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                SaveAdoptionBtnActionPerformed(evt);
+            }
+        });
+        AdoptionPanel.add(SaveAdoptionBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(276, 266, -1, -1));
 
         InfoPanel.addTab("Adoption", AdoptionPanel);
 
@@ -1388,6 +1393,10 @@ public class editCatMenu extends javax.swing.JFrame {
         onDelCaretakerSelected();
     }//GEN-LAST:event_delCaretakersComboActionPerformed
 
+    private void SaveAdoptionBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveAdoptionBtnActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_SaveAdoptionBtnActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel ADpanel;
@@ -1406,6 +1415,7 @@ public class editCatMenu extends javax.swing.JFrame {
     private javax.swing.JTextArea HealthTextArea;
     private javax.swing.JTextArea IncidentsTextArea;
     private javax.swing.JTabbedPane InfoPanel;
+    private javax.swing.JButton SaveAdoptionBtn;
     private javax.swing.JButton addCaretakerBtn;
     private javax.swing.JLabel addCtContactLabel;
     private javax.swing.JLabel addCtNameLabel;
@@ -1423,7 +1433,6 @@ public class editCatMenu extends javax.swing.JFrame {
     private javax.swing.JComboBox<String> genderCombo;
     private javax.swing.JPanel healthPanel;
     private javax.swing.JPanel incidentsPanel;
-    private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;

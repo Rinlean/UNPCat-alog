@@ -379,51 +379,51 @@ public class catProfileMenu extends javax.swing.JFrame {
         basicInfoPnl.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jLabel1.setText("Cat ID:");
-        basicInfoPnl.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 30, -1, -1));
+        basicInfoPnl.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 30, -1, -1));
 
         jLabel2.setText("Name:");
-        basicInfoPnl.add(jLabel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 60, -1, -1));
+        basicInfoPnl.add(jLabel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 60, -1, -1));
 
         jLabel3.setText("Gender:");
-        basicInfoPnl.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 90, -1, -1));
+        basicInfoPnl.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 90, -1, -1));
 
         jLabel4.setText("Breed:");
-        basicInfoPnl.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 120, -1, -1));
+        basicInfoPnl.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 120, -1, -1));
 
         jLabel5.setText("Color:");
-        basicInfoPnl.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 150, -1, -1));
+        basicInfoPnl.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 150, -1, -1));
 
         jLabel6.setText("Area:");
-        basicInfoPnl.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 180, -1, -1));
-        basicInfoPnl.add(lblId, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 30, -1, -1));
-        basicInfoPnl.add(lblName, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 60, -1, -1));
-        basicInfoPnl.add(lblGender, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 90, -1, -1));
-        basicInfoPnl.add(lblBreed, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 120, -1, -1));
-        basicInfoPnl.add(lblColor, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 150, -1, -1));
-        basicInfoPnl.add(lblArea, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 180, -1, -1));
+        basicInfoPnl.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 180, -1, -1));
+        basicInfoPnl.add(lblId, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 30, -1, -1));
+        basicInfoPnl.add(lblName, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 60, -1, -1));
+        basicInfoPnl.add(lblGender, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 90, -1, -1));
+        basicInfoPnl.add(lblBreed, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 120, -1, -1));
+        basicInfoPnl.add(lblColor, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 150, -1, -1));
+        basicInfoPnl.add(lblArea, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 180, -1, -1));
 
-        getContentPane().add(basicInfoPnl, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 360, 220));
+        getContentPane().add(basicInfoPnl, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 400, 220));
 
         adoptionPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Adoption Status", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Arial Black", 1, 12))); // NOI18N
         adoptionPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         jLabel13.setText("Status:");
-        adoptionPanel.add(jLabel13, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 40, -1, -1));
+        adoptionPanel.add(jLabel13, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 40, -1, -1));
 
         jLabel14.setText("When:");
-        adoptionPanel.add(jLabel14, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 70, -1, -1));
+        adoptionPanel.add(jLabel14, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 70, -1, -1));
 
         jLabel15.setText("Notes:");
-        adoptionPanel.add(jLabel15, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 100, -1, -1));
+        adoptionPanel.add(jLabel15, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 100, -1, -1));
 
         jLabel16.setText("Adopter:");
-        adoptionPanel.add(jLabel16, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 130, -1, -1));
-        adoptionPanel.add(lblAdoptionStatus, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 40, -1, -1));
-        adoptionPanel.add(lblAdoptionWhen, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 70, -1, -1));
-        adoptionPanel.add(lblAdoptionNotes, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 100, -1, -1));
-        adoptionPanel.add(lblAdopter, new org.netbeans.lib.awtextra.AbsoluteConstraints(120, 130, -1, -1));
+        adoptionPanel.add(jLabel16, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 130, -1, -1));
+        adoptionPanel.add(lblAdoptionStatus, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 40, -1, -1));
+        adoptionPanel.add(lblAdoptionWhen, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 70, -1, -1));
+        adoptionPanel.add(lblAdoptionNotes, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 100, -1, -1));
+        adoptionPanel.add(lblAdopter, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 130, -1, -1));
 
-        getContentPane().add(adoptionPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(360, 0, 360, 220));
+        getContentPane().add(adoptionPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 0, 320, 220));
 
         tblHealth.setModel(healthModel);
         tblHealth.setRowSelectionAllowed(false);

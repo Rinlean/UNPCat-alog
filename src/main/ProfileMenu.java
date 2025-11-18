@@ -89,9 +89,10 @@ public class ProfileMenu extends javax.swing.JFrame {
                 final String displayContact = (caretakerContact == null) ? "" : caretakerContact;
                 SwingUtilities.invokeLater(() -> {
                     setID.setText(String.valueOf(accountId));
+                    setUsername.setText(username);
                     setName.setText(displayName);
                     setContact.setText(displayContact);
-                    setTitle("Profile: " + (username == null ? "" : username));
+                    setTitle("Profile: " + (displayName == null ? "" : displayName));
                 });
             }
         }.execute();
@@ -104,39 +105,31 @@ public class ProfileMenu extends javax.swing.JFrame {
         setID = new javax.swing.JLabel();
         setName = new javax.swing.JLabel();
         setContact = new javax.swing.JLabel();
-        nameLabel = new javax.swing.JLabel();
-        IDlabel = new javax.swing.JLabel();
-        Contact = new javax.swing.JLabel();
         OldPassword = new javax.swing.JPasswordField();
         NewPassword = new javax.swing.JPasswordField();
         ConfirmPassword = new javax.swing.JPasswordField();
         LogoutBtn = new javax.swing.JButton();
         SaveBtn = new javax.swing.JButton();
+        setUsername = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setMaximumSize(new java.awt.Dimension(400, 350));
         setMinimumSize(new java.awt.Dimension(400, 350));
-        setPreferredSize(new java.awt.Dimension(400, 350));
+        setPreferredSize(new java.awt.Dimension(400, 370));
         setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         setID.setText("jLabel1");
-        getContentPane().add(setID, new org.netbeans.lib.awtextra.AbsoluteConstraints(210, 20, -1, -1));
+        setID.setBorder(javax.swing.BorderFactory.createTitledBorder("ID"));
+        getContentPane().add(setID, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 20, 70, -1));
 
         setName.setText("jLabel2");
-        getContentPane().add(setName, new org.netbeans.lib.awtextra.AbsoluteConstraints(210, 70, -1, -1));
+        setName.setBorder(javax.swing.BorderFactory.createTitledBorder("Name"));
+        getContentPane().add(setName, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 70, 200, -1));
 
         setContact.setText("jLabel3");
-        getContentPane().add(setContact, new org.netbeans.lib.awtextra.AbsoluteConstraints(210, 130, -1, -1));
-
-        nameLabel.setText("Name");
-        getContentPane().add(nameLabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 70, -1, -1));
-
-        IDlabel.setText("ID");
-        getContentPane().add(IDlabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 20, -1, -1));
-
-        Contact.setText("Contact");
-        getContentPane().add(Contact, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 130, -1, -1));
+        setContact.setBorder(javax.swing.BorderFactory.createTitledBorder("Contact"));
+        getContentPane().add(setContact, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 110, 200, -1));
 
         OldPassword.setBorder(javax.swing.BorderFactory.createTitledBorder("Old Password"));
         getContentPane().add(OldPassword, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 170, 200, -1));
@@ -153,7 +146,7 @@ public class ProfileMenu extends javax.swing.JFrame {
                 LogoutBtnActionPerformed(evt);
             }
         });
-        getContentPane().add(LogoutBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(290, 270, -1, -1));
+        getContentPane().add(LogoutBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 280, -1, -1));
 
         SaveBtn.setText("Save");
         SaveBtn.addActionListener(new java.awt.event.ActionListener() {
@@ -161,7 +154,11 @@ public class ProfileMenu extends javax.swing.JFrame {
                 SaveBtnActionPerformed(evt);
             }
         });
-        getContentPane().add(SaveBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(290, 230, -1, -1));
+        getContentPane().add(SaveBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 240, -1, -1));
+
+        setUsername.setText("jLabel1");
+        setUsername.setBorder(javax.swing.BorderFactory.createTitledBorder("Username"));
+        getContentPane().add(setUsername, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 20, 120, -1));
 
         pack();
         setLocationRelativeTo(null);
@@ -322,15 +319,13 @@ public class ProfileMenu extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPasswordField ConfirmPassword;
-    private javax.swing.JLabel Contact;
-    private javax.swing.JLabel IDlabel;
     private javax.swing.JButton LogoutBtn;
     private javax.swing.JPasswordField NewPassword;
     private javax.swing.JPasswordField OldPassword;
     private javax.swing.JButton SaveBtn;
-    private javax.swing.JLabel nameLabel;
     private javax.swing.JLabel setContact;
     private javax.swing.JLabel setID;
     private javax.swing.JLabel setName;
+    private javax.swing.JLabel setUsername;
     // End of variables declaration//GEN-END:variables
 }
