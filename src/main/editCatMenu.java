@@ -32,6 +32,18 @@ public class editCatMenu extends javax.swing.JFrame {
             return false;
         }
     };
+    private final DefaultTableModel BehaviourTable = new DefaultTableModel(new Object[]{"ID", "Date", "Behaviour"}, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
+    private final DefaultTableModel OtherNotesModel = new DefaultTableModel(new Object[]{"ID", "Date", "Notes"}, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
 
     public editCatMenu(int accountId, catProfileMenu catProf) {
         this.accountId = accountId;
@@ -57,6 +69,18 @@ public class editCatMenu extends javax.swing.JFrame {
                     delIncidentComTable.getColumnModel().getColumn(0).setPreferredWidth(0);
                     delIncidentComTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
                 }
+                if (BehaTable.getColumnModel().getColumnCount() > 0) {
+                    BehaTable.getColumnModel().getColumn(0).setMinWidth(0);
+                    BehaTable.getColumnModel().getColumn(0).setMaxWidth(0);
+                    BehaTable.getColumnModel().getColumn(0).setPreferredWidth(0);
+                    BehaTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+                }
+                if (OtherNotesTable.getColumnModel().getColumnCount() > 0) {
+                    OtherNotesTable.getColumnModel().getColumn(0).setMinWidth(0);
+                    OtherNotesTable.getColumnModel().getColumn(0).setMaxWidth(0);
+                    OtherNotesTable.getColumnModel().getColumn(0).setPreferredWidth(0);
+                    OtherNotesTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+                }
             } catch (Throwable t) {
                 logger.log(java.util.logging.Level.FINE, "Failed to configure delete tables", t);
             }
@@ -71,12 +95,10 @@ public class editCatMenu extends javax.swing.JFrame {
                 catId = ((CatItem) sel).id;
             }
             loadAvailableCaretakersForCat(catId);
-            // populate delete tables for initially selected cat as well
             if (catId > 0) {
                 populateDelHealth(catId);
                 populateDelIncidents(catId);
             } else {
-                // clear
                 healthModel.setRowCount(0);
                 incidentsModel.setRowCount(0);
             }
@@ -739,8 +761,30 @@ public class editCatMenu extends javax.swing.JFrame {
         saveBtn = new javax.swing.JButton();
         AdoptionPanel = new javax.swing.JPanel();
         statusComboBox = new javax.swing.JComboBox<>();
+        jScrollPane5 = new javax.swing.JScrollPane();
+        NotesAdoptionArea = new javax.swing.JTextArea();
+        jPanel1 = new javax.swing.JPanel();
+        jScrollPane6 = new javax.swing.JScrollPane();
+        ListofOldAdopters = new javax.swing.JList<>();
+        NameAdopterField = new javax.swing.JTextField();
+        ContactAdopterField = new javax.swing.JTextField();
         SaveAdoptionBtn = new javax.swing.JButton();
         BehaviourPanel = new javax.swing.JPanel();
+        BehInnerPanel = new javax.swing.JTabbedPane();
+        BehavComments = new javax.swing.JPanel();
+        jScrollPane7 = new javax.swing.JScrollPane();
+        BehaviourArea = new javax.swing.JTextArea();
+        SvBehavCommentsBtn = new javax.swing.JButton();
+        OtherNotesPanel = new javax.swing.JPanel();
+        jScrollPane8 = new javax.swing.JScrollPane();
+        OthernoteArea = new javax.swing.JTextArea();
+        SvOtherNotesBtn = new javax.swing.JButton();
+        deleteBehaviourNotes = new javax.swing.JPanel();
+        jScrollPane9 = new javax.swing.JScrollPane();
+        BehaTable = new javax.swing.JTable();
+        jScrollPane10 = new javax.swing.JScrollPane();
+        OtherNotesTable = new javax.swing.JTable();
+        DelBehaCommentsBtn = new javax.swing.JButton();
         caretakerPanel = new javax.swing.JLayeredPane();
         ADpanel = new javax.swing.JPanel();
         DelCaretakerPanel = new javax.swing.JPanel();
@@ -869,8 +913,34 @@ public class editCatMenu extends javax.swing.JFrame {
 
         AdoptionPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
-        statusComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
-        AdoptionPanel.add(statusComboBox, new org.netbeans.lib.awtextra.AbsoluteConstraints(62, 31, -1, -1));
+        statusComboBox.setBorder(javax.swing.BorderFactory.createTitledBorder("Status"));
+        AdoptionPanel.add(statusComboBox, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 10, 170, -1));
+
+        NotesAdoptionArea.setColumns(20);
+        NotesAdoptionArea.setRows(5);
+        NotesAdoptionArea.setBorder(javax.swing.BorderFactory.createTitledBorder("Notes"));
+        jScrollPane5.setViewportView(NotesAdoptionArea);
+
+        AdoptionPanel.add(jScrollPane5, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 60, 340, -1));
+
+        jPanel1.setBorder(javax.swing.BorderFactory.createTitledBorder("Choose or Add new Adopter"));
+        jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        ListofOldAdopters.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Available Adopters", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Segoe UI", 0, 10))); // NOI18N
+        ListofOldAdopters.setModel(new javax.swing.AbstractListModel<String>() {
+            String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+            public int getSize() { return strings.length; }
+            public String getElementAt(int i) { return strings[i]; }
+        });
+        jScrollPane6.setViewportView(ListofOldAdopters);
+
+        jPanel1.add(jScrollPane6, new org.netbeans.lib.awtextra.AbsoluteConstraints(15, 30, 110, 140));
+
+        NameAdopterField.setBorder(javax.swing.BorderFactory.createTitledBorder("Name"));
+        jPanel1.add(NameAdopterField, new org.netbeans.lib.awtextra.AbsoluteConstraints(135, 30, 210, -1));
+
+        ContactAdopterField.setBorder(javax.swing.BorderFactory.createTitledBorder("Email"));
+        jPanel1.add(ContactAdopterField, new org.netbeans.lib.awtextra.AbsoluteConstraints(135, 80, 210, -1));
 
         SaveAdoptionBtn.setText("Save");
         SaveAdoptionBtn.addActionListener(new java.awt.event.ActionListener() {
@@ -878,21 +948,126 @@ public class editCatMenu extends javax.swing.JFrame {
                 SaveAdoptionBtnActionPerformed(evt);
             }
         });
-        AdoptionPanel.add(SaveAdoptionBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(276, 266, -1, -1));
+        jPanel1.add(SaveAdoptionBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(270, 140, -1, -1));
+
+        AdoptionPanel.add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 170, 360, 180));
 
         InfoPanel.addTab("Adoption", AdoptionPanel);
 
         BehaviourPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        BehaviourArea.setColumns(20);
+        BehaviourArea.setRows(5);
+        jScrollPane7.setViewportView(BehaviourArea);
+
+        SvBehavCommentsBtn.setText("jButton1");
+        SvBehavCommentsBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                SvBehavCommentsBtnActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout BehavCommentsLayout = new javax.swing.GroupLayout(BehavComments);
+        BehavComments.setLayout(BehavCommentsLayout);
+        BehavCommentsLayout.setHorizontalGroup(
+            BehavCommentsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(BehavCommentsLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(BehavCommentsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane7, javax.swing.GroupLayout.DEFAULT_SIZE, 388, Short.MAX_VALUE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BehavCommentsLayout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(SvBehavCommentsBtn)
+                        .addGap(22, 22, 22)))
+                .addContainerGap())
+        );
+        BehavCommentsLayout.setVerticalGroup(
+            BehavCommentsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(BehavCommentsLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane7, javax.swing.GroupLayout.PREFERRED_SIZE, 275, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(SvBehavCommentsBtn)
+                .addContainerGap(15, Short.MAX_VALUE))
+        );
+
+        BehInnerPanel.addTab("Behaviour Comments", BehavComments);
+
+        OthernoteArea.setColumns(20);
+        OthernoteArea.setRows(5);
+        jScrollPane8.setViewportView(OthernoteArea);
+
+        SvOtherNotesBtn.setText("jButton1");
+        SvOtherNotesBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                SvOtherNotesBtnActionPerformed(evt);
+            }
+        });
+
+        javax.swing.GroupLayout OtherNotesPanelLayout = new javax.swing.GroupLayout(OtherNotesPanel);
+        OtherNotesPanel.setLayout(OtherNotesPanelLayout);
+        OtherNotesPanelLayout.setHorizontalGroup(
+            OtherNotesPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(OtherNotesPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(OtherNotesPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane8, javax.swing.GroupLayout.DEFAULT_SIZE, 388, Short.MAX_VALUE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, OtherNotesPanelLayout.createSequentialGroup()
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addComponent(SvOtherNotesBtn)
+                        .addGap(22, 22, 22)))
+                .addContainerGap())
+        );
+        OtherNotesPanelLayout.setVerticalGroup(
+            OtherNotesPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(OtherNotesPanelLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane8, javax.swing.GroupLayout.PREFERRED_SIZE, 275, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(SvOtherNotesBtn)
+                .addContainerGap(15, Short.MAX_VALUE))
+        );
+
+        BehInnerPanel.addTab("Other Notes", OtherNotesPanel);
+
+        deleteBehaviourNotes.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
+
+        jScrollPane9.setBorder(javax.swing.BorderFactory.createTitledBorder("Behaviour Comments"));
+
+        BehaTable.setModel(BehaviourTable);
+        jScrollPane9.setViewportView(BehaTable);
+
+        deleteBehaviourNotes.add(jScrollPane9, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 380, 123));
+
+        jScrollPane10.setBorder(javax.swing.BorderFactory.createTitledBorder("Notes"));
+
+        OtherNotesTable.setModel(OtherNotesModel);
+        jScrollPane10.setViewportView(OtherNotesTable);
+
+        deleteBehaviourNotes.add(jScrollPane10, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 140, 380, 123));
+
+        DelBehaCommentsBtn.setText("Delete");
+        DelBehaCommentsBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                DelBehaCommentsBtnActionPerformed(evt);
+            }
+        });
+        deleteBehaviourNotes.add(DelBehaCommentsBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 270, -1, -1));
+
+        BehInnerPanel.addTab("Delete", deleteBehaviourNotes);
+
+        BehaviourPanel.add(BehInnerPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 400, 360));
+
         InfoPanel.addTab("Behaviour", BehaviourPanel);
 
         caretakerPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
         ADpanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
-        DelCaretakerPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Delete Caretaker"));
+        DelCaretakerPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("Remove Caretaker"));
         DelCaretakerPanel.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
-        delCaretakerBtn.setText("Delete");
+        delCaretakerBtn.setText("Remove");
         delCaretakerBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 delCaretakerBtnActionPerformed(evt);
@@ -1397,6 +1572,18 @@ public class editCatMenu extends javax.swing.JFrame {
         // TODO add your handling code here:
     }//GEN-LAST:event_SaveAdoptionBtnActionPerformed
 
+    private void DelBehaCommentsBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DelBehaCommentsBtnActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_DelBehaCommentsBtnActionPerformed
+
+    private void SvOtherNotesBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SvOtherNotesBtnActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_SvOtherNotesBtnActionPerformed
+
+    private void SvBehavCommentsBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SvBehavCommentsBtnActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_SvBehavCommentsBtnActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JPanel ADpanel;
@@ -1405,9 +1592,15 @@ public class editCatMenu extends javax.swing.JFrame {
     private javax.swing.JButton AddIncidentCommentBtn;
     private javax.swing.JPanel AdoptionPanel;
     private javax.swing.JPanel BasicInfoPanel;
+    private javax.swing.JTabbedPane BehInnerPanel;
+    private javax.swing.JTable BehaTable;
+    private javax.swing.JPanel BehavComments;
+    private javax.swing.JTextArea BehaviourArea;
     private javax.swing.JPanel BehaviourPanel;
     private javax.swing.JComboBox<String> CaretakersCombo;
     private javax.swing.JTabbedPane CommentsPanel;
+    private javax.swing.JTextField ContactAdopterField;
+    private javax.swing.JButton DelBehaCommentsBtn;
     private javax.swing.JPanel DelCaretakerPanel;
     private javax.swing.JLabel DelCtContactLabel2;
     private javax.swing.JLabel DelCtNameLabel;
@@ -1415,7 +1608,15 @@ public class editCatMenu extends javax.swing.JFrame {
     private javax.swing.JTextArea HealthTextArea;
     private javax.swing.JTextArea IncidentsTextArea;
     private javax.swing.JTabbedPane InfoPanel;
+    private javax.swing.JList<String> ListofOldAdopters;
+    private javax.swing.JTextField NameAdopterField;
+    private javax.swing.JTextArea NotesAdoptionArea;
+    private javax.swing.JPanel OtherNotesPanel;
+    private javax.swing.JTable OtherNotesTable;
+    private javax.swing.JTextArea OthernoteArea;
     private javax.swing.JButton SaveAdoptionBtn;
+    private javax.swing.JButton SvBehavCommentsBtn;
+    private javax.swing.JButton SvOtherNotesBtn;
     private javax.swing.JButton addCaretakerBtn;
     private javax.swing.JLabel addCtContactLabel;
     private javax.swing.JLabel addCtNameLabel;
@@ -1430,14 +1631,22 @@ public class editCatMenu extends javax.swing.JFrame {
     private javax.swing.JPanel delCommentsPanel;
     private javax.swing.JTable delHealthComTable;
     private javax.swing.JTable delIncidentComTable;
+    private javax.swing.JPanel deleteBehaviourNotes;
     private javax.swing.JComboBox<String> genderCombo;
     private javax.swing.JPanel healthPanel;
     private javax.swing.JPanel incidentsPanel;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JScrollPane jScrollPane10;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
+    private javax.swing.JScrollPane jScrollPane5;
+    private javax.swing.JScrollPane jScrollPane6;
+    private javax.swing.JScrollPane jScrollPane7;
+    private javax.swing.JScrollPane jScrollPane8;
+    private javax.swing.JScrollPane jScrollPane9;
     private javax.swing.JTextField nameField;
     private javax.swing.JButton saveBtn;
     private javax.swing.JComboBox<String> statusComboBox;

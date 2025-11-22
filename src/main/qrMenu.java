@@ -565,7 +565,8 @@ public class qrMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_ADeditCtakersBtnActionPerformed
 
     private void adoptBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_adoptBtnActionPerformed
-        // TODO add your handling code here:
+        adoptMenu adopt = new adoptMenu();
+        adopt.setVisible(true);
     }//GEN-LAST:event_adoptBtnActionPerformed
 
     public static void main(String[] args) {

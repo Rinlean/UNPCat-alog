@@ -237,6 +237,7 @@ public class editCaretakersMenu extends javax.swing.JFrame {
         getContentPane().add(usernameLabel, new org.netbeans.lib.awtextra.AbsoluteConstraints(172, 110, 220, -1));
 
         pack();
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
     private void SaveBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveBtnActionPerformed
