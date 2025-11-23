@@ -38,12 +38,12 @@ public class adoptMenu extends javax.swing.JFrame {
             String sql
                     = "SELECT c.cat_id, c.name "
                     + "FROM cat c "
-                    + "JOIN ( "
+                    + "LEFT JOIN ( "
                     + "  SELECT a1.cat_id, a1.status FROM adoption_status a1 "
                     + "  JOIN (SELECT cat_id, MAX(changed_at) AS maxc FROM adoption_status GROUP BY cat_id) a2 "
                     + "    ON a1.cat_id = a2.cat_id AND a1.changed_at = a2.maxc "
                     + ") latest ON c.cat_id = latest.cat_id "
-                    + "WHERE latest.status = 'Available' "
+                    + "WHERE latest.status = 'Available' OR latest.status IS NULL "
                     + "ORDER BY c.name";
 
             try (Connection conn = main.stuff.dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
@@ -103,6 +103,7 @@ public class adoptMenu extends javax.swing.JFrame {
         listCats = new javax.swing.JList<>();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+        setMinimumSize(new java.awt.Dimension(637, 300));
         setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -125,7 +126,7 @@ public class adoptMenu extends javax.swing.JFrame {
         getContentPane().add(adoptNowBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 200, -1, -1));
 
         jLabel1.setText("Adoption process will take a few days. Emails and or interviews will happen before adoption is finalized and processed.");
-        getContentPane().add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(15, 260, -1, -1));
+        getContentPane().add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 240, -1, -1));
 
         listCats.setBorder(javax.swing.BorderFactory.createTitledBorder("Select a Cat to adopt"));
         listCats.setModel(new javax.swing.AbstractListModel<String>() {
@@ -138,6 +139,7 @@ public class adoptMenu extends javax.swing.JFrame {
         getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 40, 250, 180));
 
         pack();
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
     private void adoptNowBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_adoptNowBtnActionPerformed

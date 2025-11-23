@@ -9,11 +9,20 @@ import main.stuff.imagerender;
 import java.awt.Container;
 import javax.swing.JToggleButton;
 import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 public class mapMenu extends javax.swing.JFrame {
 
+    private static final String LIGHT_IMAGE = "src\\main\\images\\map.png";
+    private static final String DARK_IMAGE = "src\\main\\images\\map_dark.png";
+
+    private imagerender bg;
+
     public mapMenu() {
         initComponents();
+        installBackground();
+        
         javax.swing.SwingUtilities.invokeLater(() -> {
             jScrollPane1.setVisible(false);
             jScrollPane2.setVisible(false);
@@ -32,16 +41,41 @@ public class mapMenu extends javax.swing.JFrame {
             jScrollPane15.setVisible(false);
             jScrollPane16.setVisible(false);
         });
-        installBackground();
+
         populateAllAreaLists();
         registerAllListsForOpenProfile();
     }
 
     private void installBackground() {
-        String imagePath = "src\\main\\images\\map.png";
+        String imagePath = LIGHT_IMAGE;
+        try {
+            String lafName = UIManager.getLookAndFeel().getName();
+            if (lafName != null && lafName.toLowerCase().contains("dark")) {
+                imagePath = DARK_IMAGE;
+            }
+        } catch (Throwable t) {
+        }
 
-        final imagerender bg = new imagerender(imagePath);
+        setBackgroundImagePath(imagePath);
+    }
+
+    public void setBackgroundImagePath(String imagePath) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> setBackgroundImagePath(imagePath));
+            return;
+        }
+
         final JLayeredPane layered = getLayeredPane();
+
+        // remove existing bg if present
+        try {
+            if (bg != null) {
+                layered.remove(bg);
+            }
+        } catch (Throwable ignored) {
+        }
+
+        bg = new imagerender(imagePath == null ? LIGHT_IMAGE : imagePath);
         layered.add(bg, Integer.valueOf(Integer.MIN_VALUE));
 
         if (getContentPane() instanceof JComponent) {
@@ -69,7 +103,18 @@ public class mapMenu extends javax.swing.JFrame {
         addComponentListener(resizeListener);
         layered.addComponentListener(resizeListener);
 
+        // initialize bounds now
         bg.setBounds(0, 0, layered.getWidth(), layered.getHeight());
+        bg.revalidate();
+        bg.repaint();
+
+        // force repaint so change is visible immediately
+        layered.revalidate();
+        layered.repaint();
+    }
+
+    public void setDarkModeBackground(boolean dark) {
+        setBackgroundImagePath(dark ? DARK_IMAGE : LIGHT_IMAGE);
     }
 
     private void togglePane(JToggleButton toggle, JScrollPane pane) {
@@ -302,15 +347,16 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane1.setViewportView(jList1);
 
-        getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(140, 20, -1, -1));
+        getContentPane().add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(790, 150, -1, -1));
 
+        jToggleButton1.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
         jToggleButton1.setText("CCIT");
         jToggleButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton1ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 20, -1, -1));
+        getContentPane().add(jToggleButton1, new org.netbeans.lib.awtextra.AbsoluteConstraints(720, 150, -1, -1));
 
         jList2.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -319,15 +365,16 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane2.setViewportView(jList2);
 
-        getContentPane().add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(410, 50, -1, -1));
+        getContentPane().add(jScrollPane2, new org.netbeans.lib.awtextra.AbsoluteConstraints(630, 210, -1, -1));
 
-        jToggleButton2.setText("jToggleButton1");
+        jToggleButton2.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton2.setText("Main Library");
         jToggleButton2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton2ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton2, new org.netbeans.lib.awtextra.AbsoluteConstraints(290, 50, -1, -1));
+        getContentPane().add(jToggleButton2, new org.netbeans.lib.awtextra.AbsoluteConstraints(530, 210, -1, -1));
 
         jList3.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -336,23 +383,25 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane3.setViewportView(jList3);
 
-        getContentPane().add(jScrollPane3, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 220, -1, -1));
+        getContentPane().add(jScrollPane3, new org.netbeans.lib.awtextra.AbsoluteConstraints(640, 310, -1, -1));
 
-        jToggleButton3.setText("jToggleButton1");
+        jToggleButton3.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton3.setText("Lagoon");
         jToggleButton3.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton3ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton3, new org.netbeans.lib.awtextra.AbsoluteConstraints(180, 220, -1, -1));
+        getContentPane().add(jToggleButton3, new org.netbeans.lib.awtextra.AbsoluteConstraints(560, 310, -1, -1));
 
-        jToggleButton4.setText("jToggleButton1");
+        jToggleButton4.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton4.setText("Gym");
         jToggleButton4.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton4ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton4, new org.netbeans.lib.awtextra.AbsoluteConstraints(430, 220, -1, -1));
+        getContentPane().add(jToggleButton4, new org.netbeans.lib.awtextra.AbsoluteConstraints(430, 310, -1, -1));
 
         jList4.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -361,7 +410,7 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane4.setViewportView(jList4);
 
-        getContentPane().add(jScrollPane4, new org.netbeans.lib.awtextra.AbsoluteConstraints(550, 220, -1, -1));
+        getContentPane().add(jScrollPane4, new org.netbeans.lib.awtextra.AbsoluteConstraints(490, 310, -1, -1));
 
         jList5.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -370,15 +419,16 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane5.setViewportView(jList5);
 
-        getContentPane().add(jScrollPane5, new org.netbeans.lib.awtextra.AbsoluteConstraints(290, 400, -1, -1));
+        getContentPane().add(jScrollPane5, new org.netbeans.lib.awtextra.AbsoluteConstraints(1100, 560, -1, -1));
 
-        jToggleButton5.setText("jToggleButton1");
+        jToggleButton5.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton5.setText("Laboratory School");
         jToggleButton5.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton5ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton5, new org.netbeans.lib.awtextra.AbsoluteConstraints(170, 400, -1, -1));
+        getContentPane().add(jToggleButton5, new org.netbeans.lib.awtextra.AbsoluteConstraints(1010, 530, -1, -1));
 
         jList6.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -387,23 +437,25 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane6.setViewportView(jList6);
 
-        getContentPane().add(jScrollPane6, new org.netbeans.lib.awtextra.AbsoluteConstraints(630, 450, -1, -1));
+        getContentPane().add(jScrollPane6, new org.netbeans.lib.awtextra.AbsoluteConstraints(1100, 350, -1, -1));
 
-        jToggleButton6.setText("jToggleButton1");
+        jToggleButton6.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton6.setText("CTE");
         jToggleButton6.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton6ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton6, new org.netbeans.lib.awtextra.AbsoluteConstraints(510, 450, -1, -1));
+        getContentPane().add(jToggleButton6, new org.netbeans.lib.awtextra.AbsoluteConstraints(1040, 390, -1, -1));
 
-        jToggleButton7.setText("jToggleButton1");
+        jToggleButton7.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton7.setText("CBAA");
         jToggleButton7.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton7ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton7, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 560, -1, -1));
+        getContentPane().add(jToggleButton7, new org.netbeans.lib.awtextra.AbsoluteConstraints(1010, 120, -1, -1));
 
         jList7.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -412,15 +464,16 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane7.setViewportView(jList7);
 
-        getContentPane().add(jScrollPane7, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 560, -1, -1));
+        getContentPane().add(jScrollPane7, new org.netbeans.lib.awtextra.AbsoluteConstraints(1080, 120, -1, -1));
 
-        jToggleButton8.setText("jToggleButton1");
+        jToggleButton8.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton8.setText("CTech");
         jToggleButton8.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton8ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton8, new org.netbeans.lib.awtextra.AbsoluteConstraints(630, 110, -1, -1));
+        getContentPane().add(jToggleButton8, new org.netbeans.lib.awtextra.AbsoluteConstraints(880, 490, -1, -1));
 
         jList8.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -429,15 +482,16 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane8.setViewportView(jList8);
 
-        getContentPane().add(jScrollPane8, new org.netbeans.lib.awtextra.AbsoluteConstraints(750, 110, -1, -1));
+        getContentPane().add(jScrollPane8, new org.netbeans.lib.awtextra.AbsoluteConstraints(880, 520, -1, -1));
 
-        jToggleButton9.setText("jToggleButton1");
+        jToggleButton9.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton9.setText("CHTM");
         jToggleButton9.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton9ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton9, new org.netbeans.lib.awtextra.AbsoluteConstraints(630, 320, -1, -1));
+        getContentPane().add(jToggleButton9, new org.netbeans.lib.awtextra.AbsoluteConstraints(540, 120, -1, -1));
 
         jList9.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -446,7 +500,7 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane9.setViewportView(jList9);
 
-        getContentPane().add(jScrollPane9, new org.netbeans.lib.awtextra.AbsoluteConstraints(750, 320, -1, -1));
+        getContentPane().add(jScrollPane9, new org.netbeans.lib.awtextra.AbsoluteConstraints(610, 120, -1, -1));
 
         jList10.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -455,15 +509,16 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane10.setViewportView(jList10);
 
-        getContentPane().add(jScrollPane10, new org.netbeans.lib.awtextra.AbsoluteConstraints(970, 240, -1, -1));
+        getContentPane().add(jScrollPane10, new org.netbeans.lib.awtextra.AbsoluteConstraints(280, 500, -1, -1));
 
-        jToggleButton10.setText("jToggleButton1");
+        jToggleButton10.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton10.setText("CArch");
         jToggleButton10.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton10ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton10, new org.netbeans.lib.awtextra.AbsoluteConstraints(850, 240, -1, -1));
+        getContentPane().add(jToggleButton10, new org.netbeans.lib.awtextra.AbsoluteConstraints(210, 500, -1, -1));
 
         jList11.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -472,23 +527,25 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane11.setViewportView(jList11);
 
-        getContentPane().add(jScrollPane11, new org.netbeans.lib.awtextra.AbsoluteConstraints(940, 430, -1, -1));
+        getContentPane().add(jScrollPane11, new org.netbeans.lib.awtextra.AbsoluteConstraints(500, 480, -1, -1));
 
-        jToggleButton11.setText("jToggleButton1");
+        jToggleButton11.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton11.setText("CHS");
         jToggleButton11.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton11ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton11, new org.netbeans.lib.awtextra.AbsoluteConstraints(820, 430, -1, -1));
+        getContentPane().add(jToggleButton11, new org.netbeans.lib.awtextra.AbsoluteConstraints(440, 480, -1, -1));
 
-        jToggleButton12.setText("jToggleButton1");
+        jToggleButton12.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton12.setText("CCJE");
         jToggleButton12.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton12ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton12, new org.netbeans.lib.awtextra.AbsoluteConstraints(760, 40, -1, -1));
+        getContentPane().add(jToggleButton12, new org.netbeans.lib.awtextra.AbsoluteConstraints(560, 440, -1, -1));
 
         jList12.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -497,7 +554,7 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane12.setViewportView(jList12);
 
-        getContentPane().add(jScrollPane12, new org.netbeans.lib.awtextra.AbsoluteConstraints(880, 40, -1, -1));
+        getContentPane().add(jScrollPane12, new org.netbeans.lib.awtextra.AbsoluteConstraints(620, 440, -1, -1));
 
         jList13.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -506,15 +563,16 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane13.setViewportView(jList13);
 
-        getContentPane().add(jScrollPane13, new org.netbeans.lib.awtextra.AbsoluteConstraints(1090, 50, -1, -1));
+        getContentPane().add(jScrollPane13, new org.netbeans.lib.awtextra.AbsoluteConstraints(720, 470, -1, -1));
 
-        jToggleButton13.setText("jToggleButton1");
+        jToggleButton13.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton13.setText("CFAD");
         jToggleButton13.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton13ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton13, new org.netbeans.lib.awtextra.AbsoluteConstraints(970, 50, -1, -1));
+        getContentPane().add(jToggleButton13, new org.netbeans.lib.awtextra.AbsoluteConstraints(650, 470, -1, -1));
 
         jList14.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -523,15 +581,16 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane14.setViewportView(jList14);
 
-        getContentPane().add(jScrollPane14, new org.netbeans.lib.awtextra.AbsoluteConstraints(1140, 440, -1, -1));
+        getContentPane().add(jScrollPane14, new org.netbeans.lib.awtextra.AbsoluteConstraints(780, 400, -1, -1));
 
-        jToggleButton14.setText("jToggleButton1");
+        jToggleButton14.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton14.setText("CPAD");
         jToggleButton14.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton14ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton14, new org.netbeans.lib.awtextra.AbsoluteConstraints(1020, 440, -1, -1));
+        getContentPane().add(jToggleButton14, new org.netbeans.lib.awtextra.AbsoluteConstraints(710, 400, -1, -1));
 
         jList15.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -540,15 +599,16 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane15.setViewportView(jList15);
 
-        getContentPane().add(jScrollPane15, new org.netbeans.lib.awtextra.AbsoluteConstraints(830, 580, -1, -1));
+        getContentPane().add(jScrollPane15, new org.netbeans.lib.awtextra.AbsoluteConstraints(910, 360, -1, -1));
 
-        jToggleButton15.setText("jToggleButton1");
+        jToggleButton15.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton15.setText("COE");
         jToggleButton15.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton15ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton15, new org.netbeans.lib.awtextra.AbsoluteConstraints(710, 580, -1, -1));
+        getContentPane().add(jToggleButton15, new org.netbeans.lib.awtextra.AbsoluteConstraints(850, 360, -1, -1));
 
         jList16.setModel(new javax.swing.AbstractListModel<String>() {
             String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
@@ -557,17 +617,18 @@ public class mapMenu extends javax.swing.JFrame {
         });
         jScrollPane16.setViewportView(jList16);
 
-        getContentPane().add(jScrollPane16, new org.netbeans.lib.awtextra.AbsoluteConstraints(1020, 590, -1, -1));
+        getContentPane().add(jScrollPane16, new org.netbeans.lib.awtextra.AbsoluteConstraints(920, 180, -1, -1));
 
-        jToggleButton16.setText("jToggleButton1");
+        jToggleButton16.setFont(new java.awt.Font("Arial Black", 1, 12)); // NOI18N
+        jToggleButton16.setText("CAS");
         jToggleButton16.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jToggleButton16ActionPerformed(evt);
             }
         });
-        getContentPane().add(jToggleButton16, new org.netbeans.lib.awtextra.AbsoluteConstraints(900, 590, -1, -1));
+        getContentPane().add(jToggleButton16, new org.netbeans.lib.awtextra.AbsoluteConstraints(860, 230, -1, -1));
 
-        setLocation(new java.awt.Point(600, 300));
+        setLocation(new java.awt.Point(400, 200));
     }// </editor-fold>//GEN-END:initComponents
 
     private void jToggleButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jToggleButton1ActionPerformed

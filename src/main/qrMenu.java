@@ -18,6 +18,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
+import javax.swing.AbstractButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -452,28 +454,69 @@ public class qrMenu extends javax.swing.JFrame {
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
-    private void MapBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_MapBtnActionPerformed
-        mapMenu map = new mapMenu();
-        map.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        map.setVisible(true);
-        MapBtn.setEnabled(false);
+    private void openWindowAndDisableButton(final AbstractButton sourceButton, Supplier<? extends Window> windowSupplier) {
+        if (sourceButton == null || windowSupplier == null) {
+            return;
+        }
 
-        map.addWindowListener(new java.awt.event.WindowAdapter() {
+        SwingUtilities.invokeLater(() -> sourceButton.setEnabled(false));
+
+        final Window child;
+        try {
+            child = windowSupplier.get();
+        } catch (Throwable t) {
+            SwingUtilities.invokeLater(() -> sourceButton.setEnabled(true));
+            java.util.logging.Logger.getLogger(getClass().getName()).log(java.util.logging.Level.FINE, "Window supplier threw", t);
+            return;
+        }
+
+        if (child == null) {
+            // Nothing to show (supplier handled its own UI), re-enable button
+            SwingUtilities.invokeLater(() -> sourceButton.setEnabled(true));
+            return;
+        }
+
+        child.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
-            public void windowClosed(java.awt.event.WindowEvent e) {
-                javax.swing.SwingUtilities.invokeLater(() -> MapBtn.setEnabled(true));
+            public void windowClosed(WindowEvent e) {
+                SwingUtilities.invokeLater(() -> sourceButton.setEnabled(true));
             }
+
+            @Override
+            public void windowClosing(WindowEvent e) {
+                SwingUtilities.invokeLater(() -> sourceButton.setEnabled(true));
+            }
+        });
+
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // If the caller already set visibility, this is harmless; otherwise show it.
+                if (!child.isVisible()) {
+                    child.setVisible(true);
+                }
+            } catch (Throwable t) {
+                SwingUtilities.invokeLater(() -> sourceButton.setEnabled(true));
+                java.util.logging.Logger.getLogger(getClass().getName()).log(java.util.logging.Level.FINE, "Failed to show child window", t);
+            }
+        });
+    }
+
+    private void MapBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_MapBtnActionPerformed
+        openWindowAndDisableButton(MapBtn, () -> {
+            mapMenu map = new mapMenu();
+            map.setDefaultCloseOperation(javax.swing.JFrame.DISPOSE_ON_CLOSE);
+            return map;
         });
     }//GEN-LAST:event_MapBtnActionPerformed
 
     private void ProfBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ProfBtnActionPerformed
-        if (accountId != null) {
-            ProfileMenu profMenu = new ProfileMenu(accountId);
-            profMenu.setVisible(true);
-        } else {
-            loginMenu logMenu = new loginMenu();
-            logMenu.setVisible(true);
-        }
+        openWindowAndDisableButton(ProfBtn, () -> {
+            if (accountId != null) {
+                return new ProfileMenu(accountId);
+            } else {
+                return new loginMenu();
+            }
+        });
     }//GEN-LAST:event_ProfBtnActionPerformed
 
     private void DarkToggBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DarkToggBtnActionPerformed
@@ -498,6 +541,17 @@ public class qrMenu extends javax.swing.JFrame {
                     ((JDialog) w).pack();
                 }
             }
+            SwingUtilities.invokeLater(() -> {
+                for (Window w : Window.getWindows()) {
+                    if (w instanceof main.mapMenu) {
+                        try {
+                            ((main.mapMenu) w).setDarkModeBackground(darkMode);
+                        } catch (Throwable t) {
+                            logger.log(Level.FINE, "Failed to update mapMenu background for dark mode", t);
+                        }
+                    }
+                }
+            });
         } catch (UnsupportedLookAndFeelException ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this,
@@ -508,38 +562,41 @@ public class qrMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_DarkToggBtnActionPerformed
 
     private void edcatinfoBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_edcatinfoBtnActionPerformed
-        catProfileMenu catProf = new catProfileMenu(0);
-        catProf.setVisible(true);
+        openWindowAndDisableButton(edcatinfoBtn, () -> {
+            catProfileMenu catProf = new catProfileMenu(0);
+            catProf.setVisible(true);
 
-        int aid = 0;
-        if (accountId != null) {
-            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT caretaker_id FROM accounts WHERE account_id = ?")) {
-                ps.setInt(1, accountId);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        int caretakerId = rs.getInt("caretaker_id");
-                        if (!rs.wasNull()) {
-                            aid = caretakerId;
+            int aid = 0;
+            if (accountId != null) {
+                try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT caretaker_id FROM accounts WHERE account_id = ?")) {
+                    ps.setInt(1, accountId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            int caretakerId = rs.getInt("caretaker_id");
+                            if (!rs.wasNull()) {
+                                aid = caretakerId;
+                            } else {
+                                aid = 0;
+                            }
                         } else {
                             aid = 0;
                         }
-                    } else {
-                        aid = 0;
                     }
+                } catch (SQLException ex) {
+                    logger.log(Level.WARNING, "Failed to lookup caretaker_id for account {0}", new Object[]{accountId});
+                    logger.log(java.util.logging.Level.FINE, "SQLException while retrieving caretaker_id", ex);
+                    JOptionPane.showMessageDialog(this,
+                            "Failed to determine caretaker mapping:\n" + ex.getMessage(),
+                            "DB error",
+                            JOptionPane.ERROR_MESSAGE);
+                    aid = 0;
                 }
-            } catch (SQLException ex) {
-                logger.log(Level.WARNING, "Failed to lookup caretaker_id for account {0}", new Object[]{accountId});
-                logger.log(java.util.logging.Level.FINE, "SQLException while retrieving caretaker_id", ex);
-                JOptionPane.showMessageDialog(this,
-                        "Failed to determine caretaker mapping:\n" + ex.getMessage(),
-                        "DB error",
-                        JOptionPane.ERROR_MESSAGE);
-                aid = 0;
             }
-        }
 
-        editCatMenu edMenu = new editCatMenu(aid, catProf);
-        edMenu.setVisible(true);
+            editCatMenu edMenu = new editCatMenu(aid, catProf);
+            edMenu.setDefaultCloseOperation(javax.swing.JFrame.DISPOSE_ON_CLOSE);
+            return edMenu;
+        });
     }//GEN-LAST:event_edcatinfoBtnActionPerformed
 
     private void startButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startButtonActionPerformed
@@ -569,22 +626,35 @@ public class qrMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_stopButtonActionPerformed
 
     private void ADtestcatprofilemenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ADtestcatprofilemenuActionPerformed
-        catProfileMenu.testMenu();
+        openWindowAndDisableButton(ADtestcatprofilemenu, () -> {
+            // testMenu appears to be a static action that shows its own UI. Call it and return null.
+            catProfileMenu.testMenu();
+            return null;
+        });
     }//GEN-LAST:event_ADtestcatprofilemenuActionPerformed
 
     private void ADeditCtakersBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ADeditCtakersBtnActionPerformed
-        editCaretakersMenu edCaretakersMenu = new editCaretakersMenu();
-        edCaretakersMenu.setVisible(true);
+        openWindowAndDisableButton(ADeditCtakersBtn, () -> {
+            editCaretakersMenu edCaretakersMenu = new editCaretakersMenu();
+            edCaretakersMenu.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            return edCaretakersMenu;
+        });
     }//GEN-LAST:event_ADeditCtakersBtnActionPerformed
 
     private void adoptBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_adoptBtnActionPerformed
-        adoptMenu adopt = new adoptMenu();
-        adopt.setVisible(true);
+        openWindowAndDisableButton(adoptBtn, () -> {
+            adoptMenu adopt = new adoptMenu();
+            adopt.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            return adopt;
+        });
     }//GEN-LAST:event_adoptBtnActionPerformed
 
     private void ADeditAdoptersBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ADeditAdoptersBtnActionPerformed
-        editAdopters edAdoptersMenu = new editAdopters();
-        edAdoptersMenu.setVisible(true);
+        openWindowAndDisableButton(ADeditAdoptersBtn, () -> {
+            editAdoptersMenu edAdoptersMenu = new editAdoptersMenu();
+            edAdoptersMenu.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            return edAdoptersMenu;
+        });
     }//GEN-LAST:event_ADeditAdoptersBtnActionPerformed
 
     public static void main(String[] args) {

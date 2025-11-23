@@ -8,12 +8,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class editAdopters extends javax.swing.JFrame {
+public class editAdoptersMenu extends javax.swing.JFrame {
 
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(editAdopters.class.getName());
+    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(editAdoptersMenu.class.getName());
     private Integer selectedAdopterId = null;
 
-    public editAdopters() {
+    public editAdoptersMenu() {
         initComponents();
         // load adopters into the list
         loadAdopters();
@@ -180,11 +180,11 @@ public class editAdopters extends javax.swing.JFrame {
 
         nameField.setText("jTextField1");
         nameField.setBorder(javax.swing.BorderFactory.createTitledBorder("Name"));
-        changeDetailsPanel.add(nameField, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 20, 188, -1));
+        changeDetailsPanel.add(nameField, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 20, 360, -1));
 
         contactField.setText("jTextField2");
         contactField.setBorder(javax.swing.BorderFactory.createTitledBorder("Contact"));
-        changeDetailsPanel.add(contactField, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 80, 188, -1));
+        changeDetailsPanel.add(contactField, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 80, 360, -1));
 
         getContentPane().add(changeDetailsPanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(20, 150, 390, 130));
 
