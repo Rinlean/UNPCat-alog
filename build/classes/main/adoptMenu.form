@@ -82,7 +82,7 @@
     </Component>
     <Component class="javax.swing.JLabel" name="jLabel1">
       <Properties>
-        <Property name="text" type="java.lang.String" value="Adoption process will take a few days. Verification process will be done through email and or interviews on video call"/>
+        <Property name="text" type="java.lang.String" value="Adoption process will take a few days. Emails and or interviews will happen before adoption is finalized and processed."/>
       </Properties>
       <Constraints>
         <Constraint layoutClass="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout" value="org.netbeans.modules.form.compat2.layouts.DesignAbsoluteLayout$AbsoluteConstraintsDescription">

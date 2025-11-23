@@ -32,13 +32,7 @@ public class editCatMenu extends javax.swing.JFrame {
             return false;
         }
     };
-    private final DefaultTableModel BehaviourTable = new DefaultTableModel(new Object[]{"ID", "Date", "Behaviour"}, 0) {
-        @Override
-        public boolean isCellEditable(int row, int column) {
-            return false;
-        }
-    };
-    private final DefaultTableModel OtherNotesModel = new DefaultTableModel(new Object[]{"ID", "Date", "Notes"}, 0) {
+    private final DefaultTableModel BehaviourTable = new DefaultTableModel(new Object[]{"ID", "Comments"}, 0) {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
@@ -75,12 +69,6 @@ public class editCatMenu extends javax.swing.JFrame {
                     BehaTable.getColumnModel().getColumn(0).setPreferredWidth(0);
                     BehaTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
                 }
-                if (OtherNotesTable.getColumnModel().getColumnCount() > 0) {
-                    OtherNotesTable.getColumnModel().getColumn(0).setMinWidth(0);
-                    OtherNotesTable.getColumnModel().getColumn(0).setMaxWidth(0);
-                    OtherNotesTable.getColumnModel().getColumn(0).setPreferredWidth(0);
-                    OtherNotesTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-                }
             } catch (Throwable t) {
                 logger.log(java.util.logging.Level.FINE, "Failed to configure delete tables", t);
             }
@@ -88,6 +76,7 @@ public class editCatMenu extends javax.swing.JFrame {
 
         loadAreas();
         loadCats();
+        initAdoptionControls();
         SwingUtilities.invokeLater(() -> {
             Object sel = catSelector.getSelectedItem();
             int catId = 0;
@@ -260,6 +249,7 @@ public class editCatMenu extends javax.swing.JFrame {
             loadDelCaretakersForCat(0);
             healthModel.setRowCount(0);
             incidentsModel.setRowCount(0);
+            BehaviourTable.setRowCount(0);
             updateParentProfile(0);
         } else {
             loadCatDetails(item.id);
@@ -267,6 +257,7 @@ public class editCatMenu extends javax.swing.JFrame {
             loadDelCaretakersForCat(item.id);
             populateDelHealth(item.id);
             populateDelIncidents(item.id);
+            populateBehaviourTable(item.id);
             updateParentProfile(item.id);
         }
     }
@@ -672,6 +663,159 @@ public class editCatMenu extends javax.swing.JFrame {
         }
     }
 
+    private void populateStatusCombo() {
+        SwingUtilities.invokeLater(() -> {
+            javax.swing.DefaultComboBoxModel<String> model;
+            if (statusComboBox.getModel() instanceof javax.swing.DefaultComboBoxModel) {
+                model = (javax.swing.DefaultComboBoxModel<String>) statusComboBox.getModel();
+                model.removeAllElements();
+            } else {
+                model = new javax.swing.DefaultComboBoxModel<>();
+                statusComboBox.setModel(model);
+            }
+
+            // Required statuses
+            model.addElement("Available");
+            model.addElement("Fostered");
+            model.addElement("Adopted");
+            model.addElement("Missing");
+            model.addElement("Other");
+
+            if (model.getSize() > 0) {
+                statusComboBox.setSelectedIndex(0);
+            }
+        });
+    }
+
+    private void loadOldAdopters() {
+        SwingUtilities.invokeLater(() -> {
+            DefaultListModel<AdopterItem> model = new DefaultListModel<>();
+            String sql = "SELECT adopter_id, name, contact_info FROM adopter ORDER BY name";
+            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    model.addElement(new AdopterItem(rs.getInt("adopter_id"), rs.getString("name"), rs.getString("contact_info")));
+                }
+            } catch (SQLException ex) {
+                logger.log(java.util.logging.Level.WARNING, "Failed to load adopters", ex);
+                model.clear();
+                model.addElement(new AdopterItem(0, "<Error loading adopters>", ""));
+            }
+
+            @SuppressWarnings("unchecked")
+            javax.swing.JList<AdopterItem> lst = (javax.swing.JList<AdopterItem>) (Object) ListofOldAdopters;
+            lst.setModel(model);
+            lst.clearSelection();
+        });
+    }
+
+    private void selectAdopterInListById(int adopterId) {
+        if (adopterId <= 0) {
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        javax.swing.JList<AdopterItem> lst = (javax.swing.JList<AdopterItem>) (Object) ListofOldAdopters;
+        javax.swing.ListModel<AdopterItem> model = lst.getModel();
+        for (int i = 0; i < model.getSize(); i++) {
+            AdopterItem it = model.getElementAt(i);
+            if (it != null && it.id == adopterId) {
+                final int idx = i;
+                SwingUtilities.invokeLater(() -> {
+                    lst.setSelectedIndex(idx);
+                    lst.ensureIndexIsVisible(idx);
+                });
+                return;
+            }
+        }
+    }
+
+    private void initAdoptionControls() {
+        populateStatusCombo();
+        loadOldAdopters();
+
+        // when status changes, toggle adopter inputs
+        statusComboBox.addActionListener(evt -> updateAdopterInputsEnabled());
+
+        // apply initial enabled/disabled state
+        SwingUtilities.invokeLater(this::updateAdopterInputsEnabled);
+    }
+
+    private void updateAdopterInputsEnabled() {
+        String status = (statusComboBox.getSelectedItem() == null) ? "" : statusComboBox.getSelectedItem().toString().trim();
+        boolean requiresAdopter = "Adopted".equalsIgnoreCase(status) || "Fostered".equalsIgnoreCase(status);
+
+        // Enable/disable manual fields and the existing-adopters list
+        NameAdopterField.setEnabled(requiresAdopter);
+        ContactAdopterField.setEnabled(requiresAdopter);
+
+        // ListofOldAdopters is declared as JList<String> in the generated code, cast for safety
+        @SuppressWarnings("unchecked")
+        javax.swing.JList<AdopterItem> adoptersList = (javax.swing.JList<AdopterItem>) (Object) ListofOldAdopters;
+        adoptersList.setEnabled(requiresAdopter);
+
+        // Optionally enable/disable SaveAdoptionBtn only when requirements are present.
+        // If you prefer the Save button always enabled, remove the next line.
+        SaveAdoptionBtn.setEnabled(true); // keep enabled so user can save status even when no adopter required
+
+        // If not required, clear any leftover inputs/selections to avoid accidental inserts
+        if (!requiresAdopter) {
+            NameAdopterField.setText("");
+            ContactAdopterField.setText("");
+            adoptersList.clearSelection();
+        }
+    }
+
+    private void populateBehaviourTable(int catId) {
+        SwingUtilities.invokeLater(() -> {
+            BehaviourTable.setRowCount(0);
+        });
+
+        // ensure table header behavior consistent with other tables
+        BehaTable.getTableHeader().setReorderingAllowed(false);
+        BehaTable.getTableHeader().setResizingAllowed(false);
+
+        if (catId <= 0) {
+            SwingUtilities.invokeLater(() -> BehaviourTable.setRowCount(0));
+            return;
+        }
+
+        String sql = "SELECT behavior_id, personality, notes FROM behavior WHERE cat_id = ? ORDER BY behavior_id DESC LIMIT 200";
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, catId);
+            try (ResultSet rs = ps.executeQuery()) {
+                List<Object[]> rows = new ArrayList<>();
+                while (rs.next()) {
+                    int id = rs.getInt("behavior_id");
+                    String personality = rs.getString("personality");
+                    String notes = rs.getString("notes");
+                    // the table model columns are {"ID","Date","Behaviour"} — Date not present in table, leave blank
+                    String combined = "";
+                    if (personality != null && !personality.isEmpty()) {
+                        combined = personality;
+                    }
+                    if (notes != null && !notes.isEmpty()) {
+                        if (!combined.isEmpty()) {
+                            combined += " — ";
+                        }
+                        combined += notes;
+                    }
+                    rows.add(new Object[]{id, combined});
+                }
+                SwingUtilities.invokeLater(() -> {
+                    BehaviourTable.setRowCount(0);
+                    for (Object[] r : rows) {
+                        BehaviourTable.addRow(r);
+                    }
+                });
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.WARNING, "Failed to populate behaviour table", ex);
+            SwingUtilities.invokeLater(() -> {
+                BehaviourTable.setRowCount(0);
+                BehaviourTable.addRow(new Object[]{-1, "Error", ex.getMessage()});
+            });
+        }
+    }
+
     private static final class CatItem {
 
         final int id;
@@ -726,6 +870,30 @@ public class editCatMenu extends javax.swing.JFrame {
         }
     }
 
+    private static final class AdopterItem {
+
+        final int id;
+        final String name;
+        final String contact;
+
+        AdopterItem(int id, String name, String contact) {
+            this.id = id;
+            this.name = (name == null) ? "" : name;
+            this.contact = (contact == null) ? "" : contact;
+        }
+
+        @Override
+        public String toString() {
+            if (id == 0) {
+                return name;
+            }
+            if (contact == null || contact.isEmpty()) {
+                return name;
+            }
+            return name + " (" + contact + ")";
+        }
+    }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -775,16 +943,12 @@ public class editCatMenu extends javax.swing.JFrame {
         jScrollPane7 = new javax.swing.JScrollPane();
         BehaviourArea = new javax.swing.JTextArea();
         SvBehavCommentsBtn = new javax.swing.JButton();
-        OtherNotesPanel = new javax.swing.JPanel();
         jScrollPane8 = new javax.swing.JScrollPane();
         OthernoteArea = new javax.swing.JTextArea();
-        SvOtherNotesBtn = new javax.swing.JButton();
         deleteBehaviourNotes = new javax.swing.JPanel();
         jScrollPane9 = new javax.swing.JScrollPane();
         BehaTable = new javax.swing.JTable();
-        jScrollPane10 = new javax.swing.JScrollPane();
-        OtherNotesTable = new javax.swing.JTable();
-        DelBehaCommentsBtn = new javax.swing.JButton();
+        DelBehaNotesCommentsBtn = new javax.swing.JButton();
         caretakerPanel = new javax.swing.JLayeredPane();
         ADpanel = new javax.swing.JPanel();
         DelCaretakerPanel = new javax.swing.JPanel();
@@ -958,14 +1122,20 @@ public class editCatMenu extends javax.swing.JFrame {
 
         BehaviourArea.setColumns(20);
         BehaviourArea.setRows(5);
+        BehaviourArea.setBorder(javax.swing.BorderFactory.createTitledBorder("Behaviour Comment"));
         jScrollPane7.setViewportView(BehaviourArea);
 
-        SvBehavCommentsBtn.setText("jButton1");
+        SvBehavCommentsBtn.setText("Comment");
         SvBehavCommentsBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 SvBehavCommentsBtnActionPerformed(evt);
             }
         });
+
+        OthernoteArea.setColumns(20);
+        OthernoteArea.setRows(5);
+        OthernoteArea.setBorder(javax.swing.BorderFactory.createTitledBorder("Note Comment"));
+        jScrollPane8.setViewportView(OthernoteArea);
 
         javax.swing.GroupLayout BehavCommentsLayout = new javax.swing.GroupLayout(BehavComments);
         BehavComments.setLayout(BehavCommentsLayout);
@@ -978,57 +1148,23 @@ public class editCatMenu extends javax.swing.JFrame {
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, BehavCommentsLayout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
                         .addComponent(SvBehavCommentsBtn)
-                        .addGap(22, 22, 22)))
+                        .addGap(22, 22, 22))
+                    .addComponent(jScrollPane8, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 388, Short.MAX_VALUE))
                 .addContainerGap())
         );
         BehavCommentsLayout.setVerticalGroup(
             BehavCommentsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(BehavCommentsLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane7, javax.swing.GroupLayout.PREFERRED_SIZE, 275, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane7, javax.swing.GroupLayout.PREFERRED_SIZE, 68, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jScrollPane8, javax.swing.GroupLayout.PREFERRED_SIZE, 187, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(14, 14, 14)
                 .addComponent(SvBehavCommentsBtn)
                 .addContainerGap(15, Short.MAX_VALUE))
         );
 
         BehInnerPanel.addTab("Behaviour Comments", BehavComments);
-
-        OthernoteArea.setColumns(20);
-        OthernoteArea.setRows(5);
-        jScrollPane8.setViewportView(OthernoteArea);
-
-        SvOtherNotesBtn.setText("jButton1");
-        SvOtherNotesBtn.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                SvOtherNotesBtnActionPerformed(evt);
-            }
-        });
-
-        javax.swing.GroupLayout OtherNotesPanelLayout = new javax.swing.GroupLayout(OtherNotesPanel);
-        OtherNotesPanel.setLayout(OtherNotesPanelLayout);
-        OtherNotesPanelLayout.setHorizontalGroup(
-            OtherNotesPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(OtherNotesPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(OtherNotesPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane8, javax.swing.GroupLayout.DEFAULT_SIZE, 388, Short.MAX_VALUE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, OtherNotesPanelLayout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(SvOtherNotesBtn)
-                        .addGap(22, 22, 22)))
-                .addContainerGap())
-        );
-        OtherNotesPanelLayout.setVerticalGroup(
-            OtherNotesPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(OtherNotesPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane8, javax.swing.GroupLayout.PREFERRED_SIZE, 275, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(SvOtherNotesBtn)
-                .addContainerGap(15, Short.MAX_VALUE))
-        );
-
-        BehInnerPanel.addTab("Other Notes", OtherNotesPanel);
 
         deleteBehaviourNotes.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
@@ -1037,22 +1173,15 @@ public class editCatMenu extends javax.swing.JFrame {
         BehaTable.setModel(BehaviourTable);
         jScrollPane9.setViewportView(BehaTable);
 
-        deleteBehaviourNotes.add(jScrollPane9, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 380, 123));
+        deleteBehaviourNotes.add(jScrollPane9, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 10, 380, 250));
 
-        jScrollPane10.setBorder(javax.swing.BorderFactory.createTitledBorder("Notes"));
-
-        OtherNotesTable.setModel(OtherNotesModel);
-        jScrollPane10.setViewportView(OtherNotesTable);
-
-        deleteBehaviourNotes.add(jScrollPane10, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 140, 380, 123));
-
-        DelBehaCommentsBtn.setText("Delete");
-        DelBehaCommentsBtn.addActionListener(new java.awt.event.ActionListener() {
+        DelBehaNotesCommentsBtn.setText("Delete");
+        DelBehaNotesCommentsBtn.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                DelBehaCommentsBtnActionPerformed(evt);
+                DelBehaNotesCommentsBtnActionPerformed(evt);
             }
         });
-        deleteBehaviourNotes.add(DelBehaCommentsBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 270, -1, -1));
+        deleteBehaviourNotes.add(DelBehaNotesCommentsBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(300, 270, -1, -1));
 
         BehInnerPanel.addTab("Delete", deleteBehaviourNotes);
 
@@ -1569,19 +1698,251 @@ public class editCatMenu extends javax.swing.JFrame {
     }//GEN-LAST:event_delCaretakersComboActionPerformed
 
     private void SaveAdoptionBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SaveAdoptionBtnActionPerformed
-        // TODO add your handling code here:
+        Object selObj = catSelector.getSelectedItem();
+        CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
+        if (sel == null || sel.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select a cat first.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int catId = sel.id;
+
+        // Read status and notes
+        String status = (statusComboBox.getSelectedItem() == null) ? "Other" : statusComboBox.getSelectedItem().toString();
+        String notes = NotesAdoptionArea.getText();
+        if (notes == null) {
+            notes = "";
+        }
+
+        // Only Adopted and Fostered require adopter info
+        boolean requiresAdopter = "Adopted".equalsIgnoreCase(status.trim()) || "Fostered".equalsIgnoreCase(status.trim());
+
+        // Option 1: selected existing adopter (ignored when not required)
+        @SuppressWarnings("unchecked")
+        javax.swing.JList<AdopterItem> adoptersList = (javax.swing.JList<AdopterItem>) (Object) ListofOldAdopters;
+        AdopterItem selectedAdopter = (adoptersList.getSelectedValue() instanceof AdopterItem) ? adoptersList.getSelectedValue() : null;
+
+        // Option 2: manual name/contact (ignored when not required)
+        String newName = NameAdopterField.getText() == null ? "" : NameAdopterField.getText().trim();
+        String newContact = ContactAdopterField.getText() == null ? "" : ContactAdopterField.getText().trim();
+
+        // Validation only when required
+        if (requiresAdopter) {
+            if (selectedAdopter == null && newName.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please either select an existing adopter or enter adopter's name.", "Validation", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        } else {
+            // Not required -> ensure we won't insert or associate an adopter
+            selectedAdopter = null;
+            newName = "";
+            newContact = "";
+        }
+
+        // Determine adopter id to use (existing or newly inserted). Null when not required.
+        Integer adopterIdToUse = null;
+        if (requiresAdopter && selectedAdopter != null && selectedAdopter.id > 0) {
+            adopterIdToUse = selectedAdopter.id;
+        }
+
+        // Insert new adopter if needed (only when required and not selecting an existing one)
+        if (requiresAdopter && adopterIdToUse == null) {
+            String insertAdopterSql = "INSERT INTO adopter (name, contact_info) VALUES (?, ?)";
+            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(insertAdopterSql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, newName);
+                ps.setString(2, newContact.isEmpty() ? null : newContact);
+                int affected = ps.executeUpdate();
+                if (affected == 0) {
+                    throw new SQLException("Failed to insert adopter");
+                }
+                try (ResultSet keys = ps.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        adopterIdToUse = keys.getInt(1);
+                    }
+                }
+            } catch (SQLException ex) {
+                logger.log(java.util.logging.Level.SEVERE, "Failed to insert adopter", ex);
+                JOptionPane.showMessageDialog(this, "Failed to add adopter: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+
+        // Insert adoption_status record (adopter_id null when not required)
+        String insertStatusSql = "INSERT INTO adoption_status (cat_id, status, changed_at, notes, adopter_id) VALUES (?, ?, NOW(), ?, ?)";
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(insertStatusSql)) {
+            ps.setInt(1, catId);
+            ps.setString(2, status);
+            ps.setString(3, notes.isEmpty() ? null : notes);
+            if (adopterIdToUse != null) {
+                ps.setInt(4, adopterIdToUse);
+            } else {
+                ps.setNull(4, Types.INTEGER);
+            }
+            int affected = ps.executeUpdate();
+            if (affected == 0) {
+                throw new SQLException("Failed to insert adoption status");
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.SEVERE, "Failed to save adoption status", ex);
+            JOptionPane.showMessageDialog(this, "Failed to save adoption: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Success: refresh adopter list and UI
+        JOptionPane.showMessageDialog(this, "Adoption status saved.", "Success", JOptionPane.INFORMATION_MESSAGE);
+        loadOldAdopters();
+        if (adopterIdToUse != null) {
+            selectAdopterInListById(adopterIdToUse);
+        }
+
+        // Refresh other related UI and parent profile
+        try {
+            loadAvailableCaretakersForCat(catId);
+            loadDelCaretakersForCat(catId);
+            populateDelHealth(catId);
+            populateDelIncidents(catId);
+            updateParentProfile(catId);
+        } catch (Throwable t) {
+            logger.log(java.util.logging.Level.FINE, "Failed to refresh after saving adoption", t);
+        }
+
+        // Clear adoption input areas and reset UI (run on EDT)
+        SwingUtilities.invokeLater(() -> {
+            NameAdopterField.setText("");
+            ContactAdopterField.setText("");
+            NotesAdoptionArea.setText("");
+            if (statusComboBox.getItemCount() > 0) {
+                statusComboBox.setSelectedIndex(0);
+            }
+            @SuppressWarnings("unchecked")
+            javax.swing.JList<AdopterItem> adopterList = (javax.swing.JList<AdopterItem>) (Object) ListofOldAdopters;
+            adopterList.clearSelection();
+            NameAdopterField.requestFocusInWindow();
+            // Ensure UI reflects the new status selection
+            updateAdopterInputsEnabled();
+        });
     }//GEN-LAST:event_SaveAdoptionBtnActionPerformed
 
-    private void DelBehaCommentsBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DelBehaCommentsBtnActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_DelBehaCommentsBtnActionPerformed
+    private void DelBehaNotesCommentsBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_DelBehaNotesCommentsBtnActionPerformed
+        Object selObj = catSelector.getSelectedItem();
+        CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
+        if (sel == null || sel.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select a cat first.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int catId = sel.id;
 
-    private void SvOtherNotesBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SvOtherNotesBtnActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_SvOtherNotesBtnActionPerformed
+        int[] selectedRows = BehaTable.getSelectedRows();
+        List<Integer> ids = new ArrayList<>();
+        for (int viewRow : selectedRows) {
+            int modelRow = BehaTable.convertRowIndexToModel(viewRow);
+            Object val = BehaviourTable.getValueAt(modelRow, 0);
+            if (val instanceof Number) {
+                ids.add(((Number) val).intValue());
+            } else if (val != null) {
+                try {
+                    ids.add(Integer.parseInt(val.toString()));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+        if (ids.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select one or more behaviour comments to delete.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Delete " + ids.size() + " selected behaviour comment(s)? This cannot be undone.",
+                "Confirm delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        int deleted = 0;
+        try (Connection conn = dbconn.getConnection()) {
+            try {
+                conn.setAutoCommit(false);
+                String deleteSql = "DELETE FROM behavior WHERE behavior_id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(deleteSql)) {
+                    for (Integer id : ids) {
+                        ps.setInt(1, id);
+                        deleted += ps.executeUpdate();
+                    }
+                }
+                conn.commit();
+            } catch (SQLException ex) {
+                try {
+                    conn.rollback();
+                } catch (Throwable ignored) {
+                }
+                throw ex;
+            } finally {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (Throwable ignored) {
+                }
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.SEVERE, "Failed to delete behaviour comments", ex);
+            JOptionPane.showMessageDialog(this, "Failed to delete behaviour comments: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+            populateBehaviourTable(catId);
+            return;
+        }
+
+        JOptionPane.showMessageDialog(this, "Deleted " + deleted + " behaviour comment(s).", "Deleted", JOptionPane.INFORMATION_MESSAGE);
+        populateBehaviourTable(catId);
+        try {
+            updateParentProfile(catId);
+        } catch (Throwable t) {
+            logger.log(java.util.logging.Level.FINE, "Failed to update profile after deleting behaviour comments", t);
+        }
+    }//GEN-LAST:event_DelBehaNotesCommentsBtnActionPerformed
 
     private void SvBehavCommentsBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_SvBehavCommentsBtnActionPerformed
-        // TODO add your handling code here:
+        Object selObj = catSelector.getSelectedItem();
+        CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
+        if (sel == null || sel.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select a cat before adding a behaviour comment.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String personality = BehaviourArea.getText();
+        String notes = OthernoteArea.getText();
+
+        if ((personality == null || personality.trim().isEmpty()) && (notes == null || notes.trim().isEmpty())) {
+            JOptionPane.showMessageDialog(this, "Please type the behaviour or notes in the text areas before clicking Comment.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        personality = personality == null ? "" : personality.trim();
+        notes = notes == null ? "" : notes.trim();
+
+        String insertSql = "INSERT INTO behavior (cat_id, personality, notes) VALUES (?, ?, ?)";
+        try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(insertSql)) {
+            ps.setInt(1, sel.id);
+            ps.setString(2, personality.isEmpty() ? null : personality);
+            ps.setString(3, notes.isEmpty() ? null : notes);
+            int affected = ps.executeUpdate();
+            if (affected == 0) {
+                JOptionPane.showMessageDialog(this, "Failed to add behaviour comment.", "DB error", JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Behaviour comment added.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                BehaviourArea.setText("");
+                OthernoteArea.setText("");
+                populateBehaviourTable(sel.id);
+                // ensure profile window refreshes to reflect new behaviour comment
+                try {
+                    updateParentProfile(sel.id);
+                } catch (Throwable t) {
+                    logger.log(java.util.logging.Level.FINE, "Failed to update profile after adding behaviour comment", t);
+                }
+            }
+        } catch (SQLException ex) {
+            logger.log(java.util.logging.Level.SEVERE, "Failed to insert behaviour comment", ex);
+            JOptionPane.showMessageDialog(this, "Failed to add behaviour comment: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+        }
     }//GEN-LAST:event_SvBehavCommentsBtnActionPerformed
 
 
@@ -1600,7 +1961,7 @@ public class editCatMenu extends javax.swing.JFrame {
     private javax.swing.JComboBox<String> CaretakersCombo;
     private javax.swing.JTabbedPane CommentsPanel;
     private javax.swing.JTextField ContactAdopterField;
-    private javax.swing.JButton DelBehaCommentsBtn;
+    private javax.swing.JButton DelBehaNotesCommentsBtn;
     private javax.swing.JPanel DelCaretakerPanel;
     private javax.swing.JLabel DelCtContactLabel2;
     private javax.swing.JLabel DelCtNameLabel;
@@ -1611,12 +1972,9 @@ public class editCatMenu extends javax.swing.JFrame {
     private javax.swing.JList<String> ListofOldAdopters;
     private javax.swing.JTextField NameAdopterField;
     private javax.swing.JTextArea NotesAdoptionArea;
-    private javax.swing.JPanel OtherNotesPanel;
-    private javax.swing.JTable OtherNotesTable;
     private javax.swing.JTextArea OthernoteArea;
     private javax.swing.JButton SaveAdoptionBtn;
     private javax.swing.JButton SvBehavCommentsBtn;
-    private javax.swing.JButton SvOtherNotesBtn;
     private javax.swing.JButton addCaretakerBtn;
     private javax.swing.JLabel addCtContactLabel;
     private javax.swing.JLabel addCtNameLabel;
@@ -1638,7 +1996,6 @@ public class editCatMenu extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel1;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JScrollPane jScrollPane10;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;

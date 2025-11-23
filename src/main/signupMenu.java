@@ -10,7 +10,9 @@ import java.util.regex.Pattern;
 public class signupMenu extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(signupMenu.class.getName());
-
+    private static final java.util.regex.Pattern EMAIL_PATTERN = java.util.regex.Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+    private static final java.util.regex.Pattern PHONE_PATTERN = java.util.regex.Pattern.compile("^\\d{11}$");
+    
     public signupMenu() {
         initComponents();
     }
@@ -83,9 +85,20 @@ public class signupMenu extends javax.swing.JFrame {
         if (email == null) {
             return false;
         }
-        // simple email regex suitable for basic validation
-        String regex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
-        return Pattern.compile(regex).matcher(email).matches();
+        return EMAIL_PATTERN.matcher(email).matches();
+    }
+
+    private static boolean isValidPhone(String phone) {
+        if (phone == null) {
+            return false;
+        }
+        // allow common separators but validate on digits count
+        String digits = phone.replaceAll("\\D", "");
+        return PHONE_PATTERN.matcher(digits).matches();
+    }
+
+    private static boolean isValidContact(String contact) {
+        return isValidEmail(contact) || isValidPhone(contact);
     }
 
     /**
@@ -128,7 +141,7 @@ public class signupMenu extends javax.swing.JFrame {
         UsernameField.setBorder(javax.swing.BorderFactory.createTitledBorder("Username"));
         getContentPane().add(UsernameField, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 80, 320, -1));
 
-        ContactField.setBorder(javax.swing.BorderFactory.createTitledBorder("Email"));
+        ContactField.setBorder(javax.swing.BorderFactory.createTitledBorder("Email or Contact Number"));
         getContentPane().add(ContactField, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 160, 300, -1));
 
         PassField.setBorder(javax.swing.BorderFactory.createTitledBorder("Password"));
@@ -173,7 +186,7 @@ public class signupMenu extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Passwords do not match.", "Validation error", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        if (!isValidEmail(contact)) {
+        if (!isValidContact(contact)) {
             JOptionPane.showMessageDialog(this, "Please enter a valid email address.", "Validation error", JOptionPane.WARNING_MESSAGE);
             return;
         }

@@ -1,11 +1,88 @@
 package main;
 
+import javax.swing.*;
+import java.sql.*;
+import java.util.logging.Level;
+
 public class adoptMenu extends javax.swing.JFrame {
-    
+
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(adoptMenu.class.getName());
+    private static final java.util.regex.Pattern EMAIL_PATTERN = java.util.regex.Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+    private static final java.util.regex.Pattern PHONE_PATTERN = java.util.regex.Pattern.compile("^\\d{11}$");
 
     public adoptMenu() {
         initComponents();
+        loadAvailableCatsForAdoption();
+    }
+
+    private static final class CatItem {
+
+        final int id;
+        final String name;
+
+        CatItem(int id, String name) {
+            this.id = id;
+            this.name = (name == null) ? "" : name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    private void loadAvailableCatsForAdoption() {
+        SwingUtilities.invokeLater(() -> {
+            DefaultListModel<CatItem> model = new DefaultListModel<>();
+
+            String sql
+                    = "SELECT c.cat_id, c.name "
+                    + "FROM cat c "
+                    + "JOIN ( "
+                    + "  SELECT a1.cat_id, a1.status FROM adoption_status a1 "
+                    + "  JOIN (SELECT cat_id, MAX(changed_at) AS maxc FROM adoption_status GROUP BY cat_id) a2 "
+                    + "    ON a1.cat_id = a2.cat_id AND a1.changed_at = a2.maxc "
+                    + ") latest ON c.cat_id = latest.cat_id "
+                    + "WHERE latest.status = 'Available' "
+                    + "ORDER BY c.name";
+
+            try (Connection conn = main.stuff.dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+
+                while (rs.next()) {
+                    model.addElement(new CatItem(rs.getInt("cat_id"), rs.getString("name")));
+                }
+
+            } catch (SQLException ex) {
+                logger.log(Level.WARNING, "Failed to load available cats for adoption", ex);
+                model.clear();
+                model.addElement(new CatItem(0, "<Error loading cats>"));
+            }
+
+            @SuppressWarnings("unchecked")
+            JList<CatItem> lst = (JList<CatItem>) (Object) listCats;
+            lst.setModel(model);
+            lst.clearSelection();
+        });
+    }
+
+    private static boolean isValidEmail(String email) {
+        if (email == null) {
+            return false;
+        }
+        return EMAIL_PATTERN.matcher(email).matches();
+    }
+
+    private static boolean isValidPhone(String phone) {
+        if (phone == null) {
+            return false;
+        }
+        // allow common separators but validate on digits count
+        String digits = phone.replaceAll("\\D", "");
+        return PHONE_PATTERN.matcher(digits).matches();
+    }
+
+    private static boolean isValidContact(String contact) {
+        return isValidEmail(contact) || isValidPhone(contact);
     }
 
     /**
@@ -47,7 +124,7 @@ public class adoptMenu extends javax.swing.JFrame {
         });
         getContentPane().add(adoptNowBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(400, 200, -1, -1));
 
-        jLabel1.setText("Adoption process will take a few days. Verification process will be done through email and or interviews on video call");
+        jLabel1.setText("Adoption process will take a few days. Emails and or interviews will happen before adoption is finalized and processed.");
         getContentPane().add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(15, 260, -1, -1));
 
         listCats.setBorder(javax.swing.BorderFactory.createTitledBorder("Select a Cat to adopt"));
@@ -64,7 +141,97 @@ public class adoptMenu extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void adoptNowBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_adoptNowBtnActionPerformed
+        @SuppressWarnings("unchecked")
+        JList<CatItem> lst = (JList<CatItem>) (Object) listCats;
+        CatItem sel = (lst.getSelectedValue() instanceof CatItem) ? lst.getSelectedValue() : null;
+        if (sel == null || sel.id == 0) {
+            JOptionPane.showMessageDialog(this, "Please select a cat to adopt from the list.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
+        String adopterName = NameField.getText() == null ? "" : NameField.getText().trim();
+        String adopterContact = ContactField.getText() == null ? "" : ContactField.getText().trim();
+
+        if (adopterName.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please enter your name.", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (adopterContact.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please enter your contact (email or phone).", "Validation", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Validate contact: must be a valid email or an 11-digit phone
+        if (!isValidContact(adopterContact)) {
+            JOptionPane.showMessageDialog(this,
+                    "Please enter a valid contact: either a valid email address or an 11-digit phone number.",
+                    "Validation",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String contactToStore = adopterContact;
+        if (isValidPhone(adopterContact)) {
+            contactToStore = adopterContact.replaceAll("\\D", "");
+        }
+
+        String insertAdopterSql = "INSERT INTO adopter (name, contact_info) VALUES (?, ?)";
+        String insertStatusSql = "INSERT INTO adoption_status (cat_id, status, changed_at, notes, adopter_id) VALUES (?, ?, NOW(), ?, ?)";
+
+        try (Connection conn = main.stuff.dbconn.getConnection()) {
+            try {
+                conn.setAutoCommit(false);
+                int newAdopterId = -1;
+                try (PreparedStatement ps = conn.prepareStatement(insertAdopterSql, Statement.RETURN_GENERATED_KEYS)) {
+                    ps.setString(1, adopterName);
+                    ps.setString(2, contactToStore.isEmpty() ? null : contactToStore);
+                    int affected = ps.executeUpdate();
+                    if (affected == 0) {
+                        throw new SQLException("Failed to insert adopter");
+                    }
+                    try (ResultSet keys = ps.getGeneratedKeys()) {
+                        if (keys.next()) {
+                            newAdopterId = keys.getInt(1);
+                        }
+                    }
+                }
+
+                // create adoption_status entry indicating a request (status 'Other' used for requests)
+                try (PreparedStatement ps2 = conn.prepareStatement(insertStatusSql)) {
+                    ps2.setInt(1, sel.id);
+                    ps2.setString(2, "Other");
+                    ps2.setString(3, "Adoption request submitted");
+                    if (newAdopterId > 0) {
+                        ps2.setInt(4, newAdopterId);
+                    } else {
+                        ps2.setNull(4, Types.INTEGER);
+                    }
+                    ps2.executeUpdate();
+                }
+
+                conn.commit();
+            } catch (SQLException ex) {
+                try {
+                    conn.rollback();
+                } catch (Throwable ignored) {
+                }
+                throw ex;
+            } finally {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (Throwable ignored) {
+                }
+            }
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, "Failed to register adopter/request", ex);
+            JOptionPane.showMessageDialog(this, "Failed to submit adoption request: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        JOptionPane.showMessageDialog(this, "Adoption request submitted. We will contact you regarding next steps.", "Request submitted", JOptionPane.INFORMATION_MESSAGE);
+        NameField.setText("");
+        ContactField.setText("");
+        loadAvailableCatsForAdoption();
     }//GEN-LAST:event_adoptNowBtnActionPerformed
 
 

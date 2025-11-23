@@ -306,7 +306,8 @@ public class qrMenu extends javax.swing.JFrame {
         stopButton = new javax.swing.JButton();
         ADpanel = new javax.swing.JPanel();
         ADeditCtakersBtn = new javax.swing.JButton();
-        testcatprofilemenu = new javax.swing.JButton();
+        ADtestcatprofilemenu = new javax.swing.JButton();
+        ADeditAdoptersBtn = new javax.swing.JButton();
         adoptBtn = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -396,10 +397,18 @@ public class qrMenu extends javax.swing.JFrame {
             }
         });
 
-        testcatprofilemenu.setText("Test Cat Profile");
-        testcatprofilemenu.addActionListener(new java.awt.event.ActionListener() {
+        ADtestcatprofilemenu.setText("Test Cat Profile");
+        ADtestcatprofilemenu.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                testcatprofilemenuActionPerformed(evt);
+                ADtestcatprofilemenuActionPerformed(evt);
+            }
+        });
+
+        ADeditAdoptersBtn.setText("Edit Adopters");
+        ADeditAdoptersBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        ADeditAdoptersBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ADeditAdoptersBtnActionPerformed(evt);
             }
         });
 
@@ -409,9 +418,11 @@ public class qrMenu extends javax.swing.JFrame {
             ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(ADpanelLayout.createSequentialGroup()
                 .addGap(35, 35, 35)
-                .addGroup(ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE)
-                    .addComponent(testcatprofilemenu, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGroup(ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(ADtestcatprofilemenu, javax.swing.GroupLayout.PREFERRED_SIZE, 270, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE)
+                        .addComponent(ADeditAdoptersBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE)))
                 .addGap(35, 35, 35))
         );
         ADpanelLayout.setVerticalGroup(
@@ -420,11 +431,13 @@ public class qrMenu extends javax.swing.JFrame {
                 .addGap(22, 22, 22)
                 .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(testcatprofilemenu, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap())
+                .addComponent(ADeditAdoptersBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(ADtestcatprofilemenu, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(23, Short.MAX_VALUE))
         );
 
-        getContentPane().add(ADpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 420, 350, 180));
+        getContentPane().add(ADpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 390, 350, 230));
 
         adoptBtn.setText("Want to adopt a cat?");
         adoptBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -555,9 +568,9 @@ public class qrMenu extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_stopButtonActionPerformed
 
-    private void testcatprofilemenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_testcatprofilemenuActionPerformed
+    private void ADtestcatprofilemenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ADtestcatprofilemenuActionPerformed
         catProfileMenu.testMenu();
-    }//GEN-LAST:event_testcatprofilemenuActionPerformed
+    }//GEN-LAST:event_ADtestcatprofilemenuActionPerformed
 
     private void ADeditCtakersBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ADeditCtakersBtnActionPerformed
         editCaretakersMenu edCaretakersMenu = new editCaretakersMenu();
@@ -568,6 +581,11 @@ public class qrMenu extends javax.swing.JFrame {
         adoptMenu adopt = new adoptMenu();
         adopt.setVisible(true);
     }//GEN-LAST:event_adoptBtnActionPerformed
+
+    private void ADeditAdoptersBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ADeditAdoptersBtnActionPerformed
+        editAdopters edAdoptersMenu = new editAdopters();
+        edAdoptersMenu.setVisible(true);
+    }//GEN-LAST:event_ADeditAdoptersBtnActionPerformed
 
     public static void main(String[] args) {
         try {
@@ -588,8 +606,10 @@ public class qrMenu extends javax.swing.JFrame {
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton ADeditAdoptersBtn;
     private javax.swing.JButton ADeditCtakersBtn;
     private javax.swing.JPanel ADpanel;
+    private javax.swing.JButton ADtestcatprofilemenu;
     private javax.swing.JToggleButton DarkToggBtn;
     private javax.swing.JButton MapBtn;
     private javax.swing.JButton ProfBtn;
@@ -597,7 +617,6 @@ public class qrMenu extends javax.swing.JFrame {
     private javax.swing.JButton edcatinfoBtn;
     private javax.swing.JButton startButton;
     private javax.swing.JButton stopButton;
-    private javax.swing.JButton testcatprofilemenu;
     private javax.swing.JPanel webcamPanel;
     // End of variables declaration//GEN-END:variables
 }
