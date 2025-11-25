@@ -9,10 +9,12 @@ import java.awt.Window;
 import main.stuff.dbconn;
 import javax.swing.*;
 import java.lang.reflect.Method;
+import java.nio.file.Path;
 import java.sql.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
 import java.util.List;
+import main.stuff.QRCodeService;
 
 public class editCatMenu extends javax.swing.JFrame {
 
@@ -1346,6 +1348,44 @@ public class editCatMenu extends javax.swing.JFrame {
                     selectCatById(newId);
                 }
                 updateParentProfile(newId);
+
+                // === NEW: generate QR code for the newly added cat when added by a caretaker ===
+                // Run in background to avoid blocking the EDT
+                if (accountId != null && accountId != 0 && newId > 0) {
+                    final int generatedId = newId;
+                    final String generatedName = name;
+                    new SwingWorker<Path, Void>() {
+                        @Override
+                        protected Path doInBackground() throws Exception {
+                            // baseUrl empty -> payload will use cat name/id text; change as needed
+                            QRCodeService svc = new QRCodeService("");
+                            return svc.generateQRCodeForCat(generatedId, generatedName, true);
+                        }
+
+                        @Override
+                        protected void done() {
+                            try {
+                                Path saved = get();
+                                if (saved != null) {
+                                    // Inform user where the QR was saved (QRCodeService already shows preview)
+                                    JOptionPane.showMessageDialog(editCatMenu.this,
+                                            "QR code saved to: " + saved.toAbsolutePath(),
+                                            "QR Generated",
+                                            JOptionPane.INFORMATION_MESSAGE);
+                                }
+                            } catch (Exception ex) {
+                                logger.log(java.util.logging.Level.FINE, "Failed to generate QR for cat " + generatedId, ex);
+                                // Don't show a blocking error to user; show an info toast instead
+                                JOptionPane.showMessageDialog(editCatMenu.this,
+                                        "Cat added but QR generation failed: " + ex.getMessage(),
+                                        "QR generation error",
+                                        JOptionPane.WARNING_MESSAGE);
+                            }
+                        }
+                    }.execute();
+                }
+                // === end QR generation ===
+
             } catch (SQLException ex) {
                 logger.log(java.util.logging.Level.SEVERE, "Failed to insert cat", ex);
                 JOptionPane.showMessageDialog(this, "Failed to insert cat: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);

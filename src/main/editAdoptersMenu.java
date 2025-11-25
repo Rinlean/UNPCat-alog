@@ -146,7 +146,7 @@ public class editAdoptersMenu extends javax.swing.JFrame {
         DeleteBtn = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("Edit Caretakers Menu");
+        setTitle("Edit Adopters Menu");
         setMinimumSize(new java.awt.Dimension(422, 350));
         setResizable(false);
         getContentPane().setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());

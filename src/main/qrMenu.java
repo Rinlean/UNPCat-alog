@@ -272,6 +272,7 @@ public class qrMenu extends javax.swing.JFrame {
 
         adoptBtn.setVisible(isGuest);
         edcatinfoBtn.setVisible(isAdmin || isCaretaker);
+        viewQr.setVisible(isAdmin || isCaretaker);
         ADpanel.setVisible(isAdmin);
     }
 
@@ -310,7 +311,9 @@ public class qrMenu extends javax.swing.JFrame {
         ADeditCtakersBtn = new javax.swing.JButton();
         ADtestcatprofilemenu = new javax.swing.JButton();
         ADeditAdoptersBtn = new javax.swing.JButton();
+        ADdelCatsBtn = new javax.swing.JButton();
         adoptBtn = new javax.swing.JButton();
+        viewQr = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("UNP Cat-alog");
@@ -414,6 +417,14 @@ public class qrMenu extends javax.swing.JFrame {
             }
         });
 
+        ADdelCatsBtn.setText("Delete Cats");
+        ADdelCatsBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        ADdelCatsBtn.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ADdelCatsBtnActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout ADpanelLayout = new javax.swing.GroupLayout(ADpanel);
         ADpanel.setLayout(ADpanelLayout);
         ADpanelLayout.setHorizontalGroup(
@@ -421,10 +432,11 @@ public class qrMenu extends javax.swing.JFrame {
             .addGroup(ADpanelLayout.createSequentialGroup()
                 .addGap(35, 35, 35)
                 .addGroup(ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(ADtestcatprofilemenu, javax.swing.GroupLayout.PREFERRED_SIZE, 270, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(ADtestcatprofilemenu, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 270, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(ADpanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                         .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE)
-                        .addComponent(ADeditAdoptersBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE)))
+                        .addComponent(ADeditAdoptersBtn, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE)
+                        .addComponent(ADdelCatsBtn, javax.swing.GroupLayout.DEFAULT_SIZE, 270, Short.MAX_VALUE)))
                 .addGap(35, 35, 35))
         );
         ADpanelLayout.setVerticalGroup(
@@ -432,14 +444,16 @@ public class qrMenu extends javax.swing.JFrame {
             .addGroup(ADpanelLayout.createSequentialGroup()
                 .addGap(22, 22, 22)
                 .addComponent(ADeditCtakersBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(ADeditAdoptersBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 12, Short.MAX_VALUE)
+                .addComponent(ADdelCatsBtn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(ADtestcatprofilemenu, javax.swing.GroupLayout.PREFERRED_SIZE, 44, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(23, Short.MAX_VALUE))
+                .addGap(33, 33, 33))
         );
 
-        getContentPane().add(ADpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 390, 350, 230));
+        getContentPane().add(ADpanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(10, 380, 350, 280));
 
         adoptBtn.setText("Want to adopt a cat?");
         adoptBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -449,6 +463,15 @@ public class qrMenu extends javax.swing.JFrame {
             }
         });
         getContentPane().add(adoptBtn, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 330, 270, 40));
+
+        viewQr.setText("View Cat's QR Code");
+        viewQr.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        viewQr.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                viewQrActionPerformed(evt);
+            }
+        });
+        getContentPane().add(viewQr, new org.netbeans.lib.awtextra.AbsoluteConstraints(50, 150, 270, 40));
 
         pack();
         setLocationRelativeTo(null);
@@ -657,6 +680,50 @@ public class qrMenu extends javax.swing.JFrame {
         });
     }//GEN-LAST:event_ADeditAdoptersBtnActionPerformed
 
+    private void viewQrActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_viewQrActionPerformed
+        int aid = 0;
+        if (accountId != null) {
+            try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT caretaker_id FROM accounts WHERE account_id = ?")) {
+                ps.setInt(1, accountId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        int caretakerId = rs.getInt("caretaker_id");
+                        if (!rs.wasNull()) {
+                            aid = caretakerId;
+                        } else {
+                            aid = 0;
+                        }
+                    } else {
+                        aid = 0;
+                    }
+                }
+            } catch (SQLException ex) {
+                logger.log(Level.WARNING, "Failed to lookup caretaker_id for account {0}", new Object[]{accountId});
+                logger.log(java.util.logging.Level.FINE, "SQLException while retrieving caretaker_id", ex);
+                JOptionPane.showMessageDialog(this,
+                        "Failed to determine caretaker mapping:\n" + ex.getMessage(),
+                        "DB error",
+                        JOptionPane.ERROR_MESSAGE);
+                aid = 0;
+            }
+        }
+
+        final int caretakerIdToUse = aid;
+        openWindowAndDisableButton(viewQr, () -> {
+            viewQRmenu view = new viewQRmenu(caretakerIdToUse);
+            view.setDefaultCloseOperation(javax.swing.JFrame.DISPOSE_ON_CLOSE);
+            return view;
+        });
+    }//GEN-LAST:event_viewQrActionPerformed
+
+    private void ADdelCatsBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ADdelCatsBtnActionPerformed
+        openWindowAndDisableButton(ADdelCatsBtn, () -> {
+            deleteCatsmenu delCatMenu = new deleteCatsmenu();
+            delCatMenu.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            return delCatMenu;
+        });
+    }//GEN-LAST:event_ADdelCatsBtnActionPerformed
+
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(new FlatLightLaf());
@@ -676,6 +743,7 @@ public class qrMenu extends javax.swing.JFrame {
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton ADdelCatsBtn;
     private javax.swing.JButton ADeditAdoptersBtn;
     private javax.swing.JButton ADeditCtakersBtn;
     private javax.swing.JPanel ADpanel;
@@ -687,6 +755,7 @@ public class qrMenu extends javax.swing.JFrame {
     private javax.swing.JButton edcatinfoBtn;
     private javax.swing.JButton startButton;
     private javax.swing.JButton stopButton;
+    private javax.swing.JButton viewQr;
     private javax.swing.JPanel webcamPanel;
     // End of variables declaration//GEN-END:variables
 }
