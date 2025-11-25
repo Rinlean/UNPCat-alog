@@ -4,8 +4,11 @@
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
             <file>file:/C:/Users/Rin/Documents/GitHub/UNPCat-alog/src/main/qrMenu.java</file>
-            <file>file:/C:/Users/Rin/Documents/GitHub/UNPCat-alog/src/main/adoptMenu.java</file>
             <file>file:/C:/Users/Rin/Documents/GitHub/UNPCat-alog/src/main/mapMenu.java</file>
+            <file>file:/C:/Users/Rin/Documents/GitHub/UNPCat-alog/src/main/stuff/QRCodeService.java</file>
+            <file>file:/C:/Users/Rin/Documents/GitHub/UNPCat-alog/src/main/viewQRmenu.java</file>
+            <file>file:/C:/Users/Rin/Documents/GitHub/UNPCat-alog/src/main/deleteCatsmenu.java</file>
+            <file>file:/C:/Users/Rin/Documents/GitHub/UNPCat-alog/src/main/editCatMenu.java</file>
         </group>
     </open-files>
 </project-private>
