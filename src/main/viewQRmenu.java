@@ -26,9 +26,8 @@ public class viewQRmenu extends javax.swing.JFrame {
 
     public viewQRmenu(int accountId) {
         this.accountId = accountId;
-        this.qrService = new QRCodeService(""); // pass base URL if you have one
+        this.qrService = new QRCodeService("");
         initComponents();
-        // load cats for this caretaker (if accountId is null, list will be empty)
         loadCatsForCaretaker();
     }
 
@@ -36,7 +35,6 @@ public class viewQRmenu extends javax.swing.JFrame {
         SwingUtilities.invokeLater(() -> {
             DefaultListModel<CatItem> model = new DefaultListModel<>();
 
-            // If accountId is null -> no one logged in (show placeholder)
             if (accountId == null) {
                 model.addElement(new CatItem(0, "<No caretaker logged in>"));
                 setListModel(model);
@@ -47,7 +45,6 @@ public class viewQRmenu extends javax.swing.JFrame {
 
             String sql;
             if (isAdmin) {
-                // Admin: list all cats
                 sql = "SELECT cat_id, name FROM cat ORDER BY name";
                 try (Connection conn = main.stuff.dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
 
@@ -65,7 +62,6 @@ public class viewQRmenu extends javax.swing.JFrame {
                     model.addElement(new CatItem(0, "<Error loading cats>"));
                 }
             } else {
-                // Regular caretaker: list only cats assigned to this caretaker
                 sql = "SELECT c.cat_id, c.name FROM cat c JOIN cat_caretaker cc ON c.cat_id = cc.cat_id WHERE cc.caretaker_id = ? ORDER BY c.name";
                 try (Connection conn = main.stuff.dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setInt(1, accountId);
@@ -232,7 +228,6 @@ public class viewQRmenu extends javax.swing.JFrame {
         final int catId = ci.id;
         final String catName = ci.name;
 
-        // Generate QR in background then prompt user where to save
         new javax.swing.SwingWorker<java.awt.image.BufferedImage, Void>() {
             @Override
             protected java.awt.image.BufferedImage doInBackground() throws Exception {
@@ -255,14 +250,12 @@ public class viewQRmenu extends javax.swing.JFrame {
                     return;
                 }
 
-                // Build default file name
                 String safeName = (catName == null || catName.isEmpty()) ? ("cat-" + catId) : ("cat-" + catId + "-" + catName.replaceAll("[^a-zA-Z0-9._-]", "_"));
                 String defaultFileName = safeName + ".png";
 
-                // Show save dialog (default to Downloads or user home)
                 javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
                 chooser.setDialogTitle("Save QR image");
-                // set default dir to Downloads if exists
+                
                 try {
                     String userHome = System.getProperty("user.home");
                     if (userHome != null && !userHome.isEmpty()) {
@@ -278,17 +271,14 @@ public class viewQRmenu extends javax.swing.JFrame {
                 chooser.setSelectedFile(new java.io.File(defaultFileName));
                 int res = chooser.showSaveDialog(viewQRmenu.this);
                 if (res != javax.swing.JFileChooser.APPROVE_OPTION) {
-                    // user cancelled
                     return;
                 }
 
                 java.io.File outFile = chooser.getSelectedFile();
-                // Ensure extension .png
                 if (!outFile.getName().toLowerCase().endsWith(".png")) {
                     outFile = new java.io.File(outFile.getParentFile(), outFile.getName() + ".png");
                 }
 
-                // Use QRCodeService to save the generated image
                 try {
                     Path outPath = outFile.toPath();
                     qrService.saveQRCodeForCat(catId, catName, outPath);

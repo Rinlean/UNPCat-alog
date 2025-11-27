@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 06, 2025 at 07:43 AM
+-- Generation Time: Nov 27, 2025 at 03:52 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -40,7 +40,8 @@ CREATE TABLE `accounts` (
 --
 
 INSERT INTO `accounts` (`account_id`, `username`, `password`, `account_type`, `caretaker_id`) VALUES
-(1, 'admin', 'admin', 'admin', 0);
+(1, 'admin', 'admin', 'admin', 0),
+(5, 'Rin', 'Rin', 'caretaker', 5);
 
 -- --------------------------------------------------------
 
@@ -60,7 +61,7 @@ CREATE TABLE `adopter` (
 
 INSERT INTO `adopter` (`adopter_id`, `name`, `contact_info`) VALUES
 (1, 'John Doe', 'john.doe@example.com'),
-(2, 'Mary Smith', 'mary.smith@example.com');
+(8, 'Christian Subere', 'Christian@gmail.com');
 
 -- --------------------------------------------------------
 
@@ -82,10 +83,7 @@ CREATE TABLE `adoption_status` (
 --
 
 INSERT INTO `adoption_status` (`status_id`, `cat_id`, `status`, `changed_at`, `notes`, `adopter_id`) VALUES
-(1, 2, 'Available', '2025-07-01 09:00:00', 'Brought to campus rescue', NULL),
-(2, 2, 'Adopted', '2025-10-01 10:00:00', 'Adopted at weekend adoption fair', 1),
-(3, 1, 'Available', '2024-05-15 08:00:00', 'Resident library cat', NULL),
-(4, 4, 'Fostered', '2025-08-01 12:00:00', 'Temporary foster placed', 2);
+(12, 6, 'Other', '2025-11-26 15:46:05', 'Adoption request submitted', 8);
 
 -- --------------------------------------------------------
 
@@ -103,11 +101,22 @@ CREATE TABLE `area` (
 --
 
 INSERT INTO `area` (`area_id`, `area_name`) VALUES
-(1, 'College of Engineering'),
-(2, 'Library'),
-(3, 'Cafeteria'),
-(4, 'Dormitories'),
-(5, 'Science Building');
+(1, 'College of Communication & Information Technology'),
+(2, 'Main Library'),
+(3, 'Lagoon'),
+(4, 'Gym'),
+(5, 'Laboratory School'),
+(6, 'College of Teacher Education'),
+(7, 'College of Business Administration and Accountancy'),
+(8, 'College of Technology'),
+(9, 'College of Hospitality and Tourism Management'),
+(10, 'College of Architecture'),
+(11, 'College of Health Sciences'),
+(12, 'College of Criminal and Justice Education'),
+(13, 'College of Fine Arts and Design'),
+(14, 'College of Public Administration'),
+(15, 'College of Engineering'),
+(16, 'College of Arts and Sciences');
 
 -- --------------------------------------------------------
 
@@ -149,9 +158,7 @@ CREATE TABLE `caretaker` (
 --
 
 INSERT INTO `caretaker` (`caretaker_id`, `name`, `contact_info`) VALUES
-(1, 'Alice Santos', 'alice.santos@school.edu'),
-(2, 'Ben Cruz', 'ben.cruz@school.edu'),
-(3, 'Campus Facilities', 'facilities@school.edu');
+(5, 'Lean', 'tleanmark@gmail.com');
 
 -- --------------------------------------------------------
 
@@ -177,7 +184,9 @@ INSERT INTO `cat` (`cat_id`, `name`, `gender`, `breed`, `color`, `area_id`) VALU
 (2, 'Tiger', 'Male', 'Tabby', 'Brown tabby', 1),
 (3, 'Shadow', 'Male', 'Domestic Shorthair', 'Black', 4),
 (4, 'Luna', 'Female', 'Siamese', 'Cream', 5),
-(5, 'Oreo', 'Unknown', 'Mixed', 'Black & White', 3);
+(5, 'Oreo', 'Unknown', 'Mixed', 'Black & White', 3),
+(6, 'Trojan', 'Male', 'Unknown', 'Black and White', 1),
+(8, 'Muning', 'Male', 'Siamese', 'Black White', 1);
 
 -- --------------------------------------------------------
 
@@ -195,11 +204,7 @@ CREATE TABLE `cat_caretaker` (
 --
 
 INSERT INTO `cat_caretaker` (`cat_id`, `caretaker_id`) VALUES
-(1, 1),
-(2, 2),
-(3, 3),
-(4, 1),
-(5, 2);
+(8, 5);
 
 -- --------------------------------------------------------
 
@@ -326,55 +331,55 @@ ALTER TABLE `incident_report`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `account_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `adopter`
 --
 ALTER TABLE `adopter`
-  MODIFY `adopter_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `adopter_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `adoption_status`
 --
 ALTER TABLE `adoption_status`
-  MODIFY `status_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `status_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `area`
 --
 ALTER TABLE `area`
-  MODIFY `area_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `area_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `behavior`
 --
 ALTER TABLE `behavior`
-  MODIFY `behavior_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `behavior_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `caretaker`
 --
 ALTER TABLE `caretaker`
-  MODIFY `caretaker_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `caretaker_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `cat`
 --
 ALTER TABLE `cat`
-  MODIFY `cat_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `cat_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `health_record`
 --
 ALTER TABLE `health_record`
-  MODIFY `health_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `health_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `incident_report`
 --
 ALTER TABLE `incident_report`
-  MODIFY `incident_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `incident_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables

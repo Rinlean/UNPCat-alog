@@ -18,7 +18,6 @@ import main.stuff.dbconn;
 
 public class catProfileMenu extends javax.swing.JFrame {
 
-    // made non-final so the currently-shown cat can be changed at runtime
     private int catId;
     private final DefaultTableModel healthModel = new DefaultTableModel(new Object[]{"Date", "Conditions"}, 0);
     private final DefaultTableModel caretakersModel = new DefaultTableModel(new Object[]{"Name", "Contact"}, 0);
@@ -26,7 +25,6 @@ public class catProfileMenu extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(catProfileMenu.class.getName());
 
-    // Auto-refresh interval (milliseconds). Adjust as needed.
     private static final int AUTO_REFRESH_MS = 30_000;
     private final Timer autoRefreshTimer;
 
@@ -34,7 +32,6 @@ public class catProfileMenu extends javax.swing.JFrame {
         this.catId = catId;
         initComponents();
 
-        // Timer triggers a background refresh of the currently displayed cat
         autoRefreshTimer = new Timer(AUTO_REFRESH_MS, e -> {
             if (this.catId > 0) {
                 fetchAndPopulate();
@@ -42,7 +39,6 @@ public class catProfileMenu extends javax.swing.JFrame {
         });
         autoRefreshTimer.setRepeats(true);
 
-        // Start timer if we have a cat already
         if (catId > 0) {
             fetchAndPopulate();
             autoRefreshTimer.start();
@@ -50,7 +46,6 @@ public class catProfileMenu extends javax.swing.JFrame {
             clearDisplay();
         }
 
-        // Ensure timer stops when window is disposed/closed
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent e) {
@@ -68,10 +63,7 @@ public class catProfileMenu extends javax.swing.JFrame {
         });
     }
 
-    /**
-     * Change the displayed cat. If newCatId > 0 the view will be refreshed (DB
-     * fetch). If newCatId is 0 or negative the UI fields are cleared.
-     */
+
     public void setCatId(int newCatId) {
         if (this.catId == newCatId) {
             return;
@@ -124,7 +116,6 @@ public class catProfileMenu extends javax.swing.JFrame {
         return dbconn.getConnection();
     }
 
-    // Keep fetchAndPopulate as-is (runs in background) — used by setCatId and the timer.
     private void fetchAndPopulate() {
         new SwingWorker<Void, Void>() {
             Exception error;
@@ -498,7 +489,6 @@ public class catProfileMenu extends javax.swing.JFrame {
                 win.setVisible(true);
             });
         } else {
-            // no args provided - behave like testMenu()
             testMenu();
         }
     }

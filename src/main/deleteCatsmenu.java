@@ -121,7 +121,6 @@ public class deleteCatsmenu extends javax.swing.JFrame {
             return;
         }
 
-        // Filter out placeholder entries with id == 0
         List<Integer> catIds = new ArrayList<>();
         StringBuilder names = new StringBuilder();
         for (CatItem ci : selected) {
@@ -151,12 +150,9 @@ public class deleteCatsmenu extends javax.swing.JFrame {
         int totalDeletedCats = 0;
         int totalDeletedRelated = 0;
 
-        // Perform deletes in a transaction for safety
         try (Connection conn = main.stuff.dbconn.getConnection()) {
             try {
                 conn.setAutoCommit(false);
-
-                // Prepare statements once
                 String deleteAdoptionSql = "DELETE FROM adoption_status WHERE cat_id = ?";
                 String deleteBehaviorSql = "DELETE FROM behavior WHERE cat_id = ?";
                 String deleteHealthSql = "DELETE FROM health_record WHERE cat_id = ?";
@@ -184,14 +180,12 @@ public class deleteCatsmenu extends javax.swing.JFrame {
                         psDelAssoc.setInt(1, cid);
                         deletedRelatedForThisCat += psDelAssoc.executeUpdate();
 
-                        // delete cat row
                         psDelCat.setInt(1, cid);
                         int catDeleted = psDelCat.executeUpdate();
                         if (catDeleted > 0) {
                             totalDeletedCats += catDeleted;
                             totalDeletedRelated += deletedRelatedForThisCat;
                         } else {
-                            // if cat row not deleted, rollback will handle consistency
                             throw new SQLException("Failed to delete cat id=" + cid + " (it may not exist).");
                         }
                     }

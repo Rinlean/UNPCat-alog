@@ -67,7 +67,6 @@ public class mapMenu extends javax.swing.JFrame {
 
         final JLayeredPane layered = getLayeredPane();
 
-        // remove existing bg if present
         try {
             if (bg != null) {
                 layered.remove(bg);
@@ -103,12 +102,10 @@ public class mapMenu extends javax.swing.JFrame {
         addComponentListener(resizeListener);
         layered.addComponentListener(resizeListener);
 
-        // initialize bounds now
         bg.setBounds(0, 0, layered.getWidth(), layered.getHeight());
         bg.revalidate();
         bg.repaint();
 
-        // force repaint so change is visible immediately
         layered.revalidate();
         layered.repaint();
     }

@@ -15,10 +15,8 @@ public class editCaretakersMenu extends javax.swing.JFrame {
 
     public editCaretakersMenu() {
         initComponents();
-        // load caretakers into the list
         loadCaretakers();
 
-        // Wire selection listener
         listCaretakers.addListSelectionListener(evt -> {
             if (!evt.getValueIsAdjusting()) {
                 Object sel = listCaretakers.getSelectedValue();
@@ -26,8 +24,6 @@ public class editCaretakersMenu extends javax.swing.JFrame {
                 onCaretakerSelected(ct);
             }
         });
-
-        // Initially no selection: disable detail controls
         setDetailsEnabled(false);
     }
 
@@ -57,13 +53,11 @@ public class editCaretakersMenu extends javax.swing.JFrame {
                 model.addElement(new CaretakerItem(0, "<Error loading caretakers>", ""));
             }
 
-            // set model on EDT
+
             SwingUtilities.invokeLater(() -> {
-                // raw type cast because listCaretakers is declared as JList<String> in the generated code
                 @SuppressWarnings("unchecked")
                 javax.swing.JList<CaretakerItem> lst = (javax.swing.JList<CaretakerItem>) (Object) listCaretakers;
                 lst.setModel(model);
-                // clear selection
                 lst.clearSelection();
             });
         });
@@ -86,14 +80,11 @@ public class editCaretakersMenu extends javax.swing.JFrame {
         selectedCaretakerId = ct.id;
         nameLabel.setText(ct.name);
         contactLabel.setText(ct.contact == null ? "" : ct.contact);
-
-        // fill change panel fields with current values
         nameField.setText(ct.name);
         contactField.setText(ct.contact == null ? "" : ct.contact);
         userField.setText("");
         passField.setText("");
 
-        // load username from accounts table (if any)
         String username = "";
         String accountsSql = "SELECT username FROM accounts WHERE caretaker_id = ? LIMIT 1";
         try (Connection conn = main.stuff.dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(accountsSql)) {
@@ -272,7 +263,6 @@ public class editCaretakersMenu extends javax.swing.JFrame {
                     ps.executeUpdate();
                 }
 
-                // handle account username/password if user provided a username or password
                 if (!newUsername.isEmpty() || !newPassword.isEmpty()) {
                     boolean accountExists = false;
                     try (PreparedStatement ps = conn.prepareStatement(upsertAccountSql)) {
@@ -283,8 +273,6 @@ public class editCaretakersMenu extends javax.swing.JFrame {
                     }
 
                     if (accountExists) {
-                        // update existing account; only change fields provided (keep existing if empty)
-                        // fetch existing username/password if needed
                         String existingUsername = null;
                         try (PreparedStatement ps = conn.prepareStatement("SELECT username FROM accounts WHERE caretaker_id = ? LIMIT 1")) {
                             ps.setInt(1, selectedCaretakerId);
@@ -304,7 +292,6 @@ public class editCaretakersMenu extends javax.swing.JFrame {
                             ps.executeUpdate();
                         }
                     } else {
-                        // insert new account only if username provided (password may be blank)
                         if (!newUsername.isEmpty()) {
                             try (PreparedStatement ps = conn.prepareStatement(insertAccountSql)) {
                                 ps.setString(1, newUsername);
@@ -336,7 +323,6 @@ public class editCaretakersMenu extends javax.swing.JFrame {
         }
 
         JOptionPane.showMessageDialog(this, "Caretaker updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
-        // reload list and re-select
         loadCaretakers();
         SwingUtilities.invokeLater(() -> selectCaretakerInListById(selectedCaretakerId));
     }//GEN-LAST:event_SaveBtnActionPerformed
@@ -393,7 +379,6 @@ public class editCaretakersMenu extends javax.swing.JFrame {
         }
 
         JOptionPane.showMessageDialog(this, "Caretaker deleted.", "Success", JOptionPane.INFORMATION_MESSAGE);
-        // refresh list and clear selection
         loadCaretakers();
         SwingUtilities.invokeLater(() -> onCaretakerSelected(null));
     }//GEN-LAST:event_DeleteBtnActionPerformed

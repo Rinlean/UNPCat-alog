@@ -41,11 +41,6 @@ public class loginMenu extends javax.swing.JFrame {
         pfieldPassword.setBorder(javax.swing.BorderFactory.createTitledBorder("Password"));
 
         txtUsername.setBorder(javax.swing.BorderFactory.createTitledBorder("Username"));
-        txtUsername.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                txtUsernameActionPerformed(evt);
-            }
-        });
 
         cancelBtn.setText("Cancel");
         cancelBtn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
@@ -138,10 +133,8 @@ public class loginMenu extends javax.swing.JFrame {
         final String username = txtUsername.getText() == null ? "" : txtUsername.getText().trim();
         final char[] passwordChars = pfieldPassword.getPassword();
 
-        // Basic validation
         if (username.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter a username.", "Missing username", JOptionPane.WARNING_MESSAGE);
-            // Clear password from memory
             Arrays.fill(passwordChars, '\0');
             return;
         }
@@ -150,7 +143,6 @@ public class loginMenu extends javax.swing.JFrame {
             return;
         }
 
-        // Convert to String only when necessary and clear the char[] afterwards
         final String password = new String(passwordChars);
 
         final String sql = "SELECT account_id, account_type, password FROM accounts WHERE username = ?";
@@ -194,29 +186,20 @@ public class loginMenu extends javax.swing.JFrame {
 
                     this.dispose();
                 } else {
-                    // Password mismatch
                     JOptionPane.showMessageDialog(this, "Incorrect password. Please try again.", "Login failed", JOptionPane.ERROR_MESSAGE);
                 }
             }
 
         } catch (ClassNotFoundException e) {
-            // Driver not found
             JOptionPane.showMessageDialog(this, "Database driver not found: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         } catch (SQLException e) {
-            // DB error
             JOptionPane.showMessageDialog(this, "Database access error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
-            // Unexpected error
             JOptionPane.showMessageDialog(this, "Unexpected error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         } finally {
-            // Clear sensitive data
             Arrays.fill(passwordChars, '\0');
         }
     }//GEN-LAST:event_loginBtnActionPerformed
-
-    private void txtUsernameActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtUsernameActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_txtUsernameActionPerformed
 
     private void registerBtnMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_registerBtnMouseClicked
         signupMenu sMenu = new signupMenu();

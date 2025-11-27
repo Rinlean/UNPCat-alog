@@ -20,7 +20,6 @@ public class signupMenu extends javax.swing.JFrame {
     private void registerUser(String name, String username, String contact, String passwordPlain) {
         try (Connection conn = dbconn.getConnection()) {
             conn.setAutoCommit(false);
-            // 1) check username uniqueness
             final String checkSql = "SELECT account_id FROM accounts WHERE username = ? LIMIT 1";
             try (PreparedStatement psCheck = conn.prepareStatement(checkSql)) {
                 psCheck.setString(1, username);
@@ -33,7 +32,6 @@ public class signupMenu extends javax.swing.JFrame {
                 }
             }
 
-            // 2) insert caretaker and get generated id
             int caretakerId = 0;
             final String insertCaretaker = "INSERT INTO caretaker (name, contact_info) VALUES (?, ?)";
             try (PreparedStatement psCaret = conn.prepareStatement(insertCaretaker, Statement.RETURN_GENERATED_KEYS)) {
@@ -47,13 +45,11 @@ public class signupMenu extends javax.swing.JFrame {
                     if (keys.next()) {
                         caretakerId = keys.getInt(1);
                     } else {
-                        // fallback: keep 0 (admin entry uses 0 in provided dump)
                         caretakerId = 0;
                     }
                 }
             }
 
-            // 3) insert account
             final String insertAccount = "INSERT INTO accounts (username, password, account_type, caretaker_id) VALUES (?, ?, ?, ?)";
             try (PreparedStatement psAcc = conn.prepareStatement(insertAccount, Statement.RETURN_GENERATED_KEYS)) {
                 psAcc.setString(1, username);
@@ -69,7 +65,6 @@ public class signupMenu extends javax.swing.JFrame {
             conn.commit();
             SwingUtilities.invokeLater(() -> {
                 JOptionPane.showMessageDialog(this, "Registration successful. Your account will be verified by the administrators.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                // Optionally close the signup window after successful registration:
                 this.dispose();
             });
         } catch (SQLException ex) {

@@ -52,7 +52,6 @@ public class editCatMenu extends javax.swing.JFrame {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                // delHealthComTable and delIncidentComTable use our models (first column = ID)
                 if (delHealthComTable.getColumnModel().getColumnCount() > 0) {
                     delHealthComTable.getColumnModel().getColumn(0).setMinWidth(0);
                     delHealthComTable.getColumnModel().getColumn(0).setMaxWidth(0);
@@ -113,7 +112,7 @@ public class editCatMenu extends javax.swing.JFrame {
 
                 Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
 
-                int x = p.x + pSize.width + margin; // try to the right
+                int x = p.x + pSize.width + margin;
                 int y = p.y;
 
                 if (x + mySize.width > screen.x + screen.width) {
@@ -420,7 +419,6 @@ public class editCatMenu extends javax.swing.JFrame {
     private void updateParentProfile(int catId) {
         catProfileMenu prof = this.profileWindow;
         if (prof != null && prof.isDisplayable()) {
-            // try to invoke refresh-like methods on the existing tracked profile
             if (tryInvokeRefreshOnProfile(prof, catId)) {
                 SwingUtilities.invokeLater(() -> {
                     try {
@@ -432,7 +430,6 @@ public class editCatMenu extends javax.swing.JFrame {
             }
         }
 
-        // Fallback: create a new profile window (best-effort)
         SwingUtilities.invokeLater(() -> {
             try {
                 try {
@@ -536,7 +533,6 @@ public class editCatMenu extends javax.swing.JFrame {
                 });
             }
 
-            // select the placeholder by default
             if (model.getSize() > 0) {
                 delCaretakersCombo.setSelectedIndex(0);
             }
@@ -620,7 +616,6 @@ public class editCatMenu extends javax.swing.JFrame {
 
         addCtNameLabel.setText(ct.name == null ? "" : ct.name);
 
-        // Try to load contact (if such a column exists). Fail quietly and leave label blank on error.
         try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT contact_info FROM caretaker WHERE caretaker_id = ?")) {
             ps.setInt(1, ct.id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -648,7 +643,6 @@ public class editCatMenu extends javax.swing.JFrame {
 
         DelCtNameLabel.setText(ct.name == null ? "" : ct.name);
 
-        // Try to load contact (if such a column exists). Fail quietly and leave label blank on error.
         try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement("SELECT contact_info FROM caretaker WHERE caretaker_id = ?")) {
             ps.setInt(1, ct.id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -676,7 +670,6 @@ public class editCatMenu extends javax.swing.JFrame {
                 statusComboBox.setModel(model);
             }
 
-            // Required statuses
             model.addElement("Available");
             model.addElement("Fostered");
             model.addElement("Adopted");
@@ -733,11 +726,7 @@ public class editCatMenu extends javax.swing.JFrame {
     private void initAdoptionControls() {
         populateStatusCombo();
         loadOldAdopters();
-
-        // when status changes, toggle adopter inputs
         statusComboBox.addActionListener(evt -> updateAdopterInputsEnabled());
-
-        // apply initial enabled/disabled state
         SwingUtilities.invokeLater(this::updateAdopterInputsEnabled);
     }
 
@@ -745,20 +734,15 @@ public class editCatMenu extends javax.swing.JFrame {
         String status = (statusComboBox.getSelectedItem() == null) ? "" : statusComboBox.getSelectedItem().toString().trim();
         boolean requiresAdopter = "Adopted".equalsIgnoreCase(status) || "Fostered".equalsIgnoreCase(status);
 
-        // Enable/disable manual fields and the existing-adopters list
         NameAdopterField.setEnabled(requiresAdopter);
         ContactAdopterField.setEnabled(requiresAdopter);
 
-        // ListofOldAdopters is declared as JList<String> in the generated code, cast for safety
         @SuppressWarnings("unchecked")
         javax.swing.JList<AdopterItem> adoptersList = (javax.swing.JList<AdopterItem>) (Object) ListofOldAdopters;
         adoptersList.setEnabled(requiresAdopter);
 
-        // Optionally enable/disable SaveAdoptionBtn only when requirements are present.
-        // If you prefer the Save button always enabled, remove the next line.
-        SaveAdoptionBtn.setEnabled(true); // keep enabled so user can save status even when no adopter required
+        SaveAdoptionBtn.setEnabled(true);
 
-        // If not required, clear any leftover inputs/selections to avoid accidental inserts
         if (!requiresAdopter) {
             NameAdopterField.setText("");
             ContactAdopterField.setText("");
@@ -770,8 +754,6 @@ public class editCatMenu extends javax.swing.JFrame {
         SwingUtilities.invokeLater(() -> {
             BehaviourTable.setRowCount(0);
         });
-
-        // ensure table header behavior consistent with other tables
         BehaTable.getTableHeader().setReorderingAllowed(false);
         BehaTable.getTableHeader().setResizingAllowed(false);
 
@@ -789,7 +771,6 @@ public class editCatMenu extends javax.swing.JFrame {
                     int id = rs.getInt("behavior_id");
                     String personality = rs.getString("personality");
                     String notes = rs.getString("notes");
-                    // the table model columns are {"ID","Date","Behaviour"} — Date not present in table, leave blank
                     String combined = "";
                     if (personality != null && !personality.isEmpty()) {
                         combined = personality;
@@ -1306,7 +1287,6 @@ public class editCatMenu extends javax.swing.JFrame {
         }
 
         if (sel.id == 0) {
-            // insert new cat (no caretaker_id column in cat table)
             String insertSql = "INSERT INTO cat (name, gender, breed, color, area_id) VALUES (?, ?, ?, ?, ?)";
             try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
                 ps.setString(1, name);
@@ -1329,7 +1309,6 @@ public class editCatMenu extends javax.swing.JFrame {
                     }
                 }
 
-                // If opened by a caretaker (non-admin), create association in cat_caretaker
                 if (accountId != null && accountId != 0 && newId > 0) {
                     String assocSql = "INSERT INTO cat_caretaker (cat_id, caretaker_id) VALUES (?, ?)";
                     try (PreparedStatement ps2 = conn.prepareStatement(assocSql)) {
@@ -1337,7 +1316,6 @@ public class editCatMenu extends javax.swing.JFrame {
                         ps2.setInt(2, accountId);
                         ps2.executeUpdate();
                     } catch (SQLException assocEx) {
-                        // log but don't fail the whole operation; association can be retried/managed later
                         logger.log(java.util.logging.Level.WARNING, "Failed to create cat_caretaker association", assocEx);
                     }
                 }
@@ -1349,15 +1327,12 @@ public class editCatMenu extends javax.swing.JFrame {
                 }
                 updateParentProfile(newId);
 
-                // === NEW: generate QR code for the newly added cat when added by a caretaker ===
-                // Run in background to avoid blocking the EDT
                 if (accountId != null && accountId != 0 && newId > 0) {
                     final int generatedId = newId;
                     final String generatedName = name;
                     new SwingWorker<Path, Void>() {
                         @Override
                         protected Path doInBackground() throws Exception {
-                            // baseUrl empty -> payload will use cat name/id text; change as needed
                             QRCodeService svc = new QRCodeService("");
                             return svc.generateQRCodeForCat(generatedId, generatedName, true);
                         }
@@ -1367,7 +1342,6 @@ public class editCatMenu extends javax.swing.JFrame {
                             try {
                                 Path saved = get();
                                 if (saved != null) {
-                                    // Inform user where the QR was saved (QRCodeService already shows preview)
                                     JOptionPane.showMessageDialog(editCatMenu.this,
                                             "QR code saved to: " + saved.toAbsolutePath(),
                                             "QR Generated",
@@ -1375,7 +1349,6 @@ public class editCatMenu extends javax.swing.JFrame {
                                 }
                             } catch (Exception ex) {
                                 logger.log(java.util.logging.Level.FINE, "Failed to generate QR for cat " + generatedId, ex);
-                                // Don't show a blocking error to user; show an info toast instead
                                 JOptionPane.showMessageDialog(editCatMenu.this,
                                         "Cat added but QR generation failed: " + ex.getMessage(),
                                         "QR generation error",
@@ -1384,14 +1357,12 @@ public class editCatMenu extends javax.swing.JFrame {
                         }
                     }.execute();
                 }
-                // === end QR generation ===
 
             } catch (SQLException ex) {
                 logger.log(java.util.logging.Level.SEVERE, "Failed to insert cat", ex);
                 JOptionPane.showMessageDialog(this, "Failed to insert cat: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
             }
         } else {
-            // update existing cat (do not attempt to modify caretakers here)
             String updateSql = "UPDATE cat SET name = ?, gender = ?, breed = ?, color = ?, area_id = ? WHERE cat_id = ?";
             try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(updateSql)) {
                 ps.setString(1, name);
@@ -1425,10 +1396,8 @@ public class editCatMenu extends javax.swing.JFrame {
         Object selObj = catSelector.getSelectedItem();
         CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
         if (sel == null || sel.id == 0) {
-            // No existing cat selected (new cat) — show "Add"
             saveBtn.setText("Add");
         } else {
-            // Existing cat selected — show "Save" (update)
             saveBtn.setText("Save");
         }
     }//GEN-LAST:event_catSelectorActionPerformed
@@ -1448,7 +1417,6 @@ public class editCatMenu extends javax.swing.JFrame {
         }
         comment = comment.trim();
 
-        // Insert into DB
         String insertSql = "INSERT INTO health_record (cat_id, conditions, date) VALUES (?, ?, CURRENT_DATE())";
         try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(insertSql)) {
             ps.setInt(1, sel.id);
@@ -1460,7 +1428,6 @@ public class editCatMenu extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, "Health comment added.", "Success", JOptionPane.INFORMATION_MESSAGE);
                 HealthTextArea.setText("");
                 populateDelHealth(sel.id);
-                // ensure profile window refreshes to reflect new comment
                 try {
                     updateParentProfile(sel.id);
                 } catch (Throwable t) {
@@ -1499,7 +1466,6 @@ public class editCatMenu extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(this, "Incident report added.", "Success", JOptionPane.INFORMATION_MESSAGE);
                 IncidentsTextArea.setText("");
                 populateDelIncidents(sel.id);
-                // refresh profile window to show new incident
                 try {
                     updateParentProfile(sel.id);
                 } catch (Throwable t) {
@@ -1568,7 +1534,6 @@ public class editCatMenu extends javax.swing.JFrame {
         }
         int catId = sel.id;
 
-        // collect health IDs
         int[] selectedHealthRows = delHealthComTable.getSelectedRows();
         List<Integer> healthIds = new ArrayList<>();
         for (int viewRow : selectedHealthRows) {
@@ -1584,7 +1549,6 @@ public class editCatMenu extends javax.swing.JFrame {
             }
         }
 
-        // collect incident IDs
         int[] selectedIncidentRows = delIncidentComTable.getSelectedRows();
         List<Integer> incidentIds = new ArrayList<>();
         for (int viewRow : selectedIncidentRows) {
@@ -1605,7 +1569,6 @@ public class editCatMenu extends javax.swing.JFrame {
             return;
         }
 
-        // Confirm deletion
         int total = healthIds.size() + incidentIds.size();
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Delete " + total + " selected comment(s)? This cannot be undone.",
@@ -1619,7 +1582,6 @@ public class editCatMenu extends javax.swing.JFrame {
         int deletedHealth = 0;
         int deletedIncidents = 0;
 
-        // perform deletes in transactions
         try (Connection conn = dbconn.getConnection()) {
             try {
                 conn.setAutoCommit(false);
@@ -1660,19 +1622,16 @@ public class editCatMenu extends javax.swing.JFrame {
         } catch (SQLException ex) {
             logger.log(java.util.logging.Level.SEVERE, "Failed to delete comments", ex);
             JOptionPane.showMessageDialog(this, "Failed to delete comments: " + ex.getMessage(), "DB error", JOptionPane.ERROR_MESSAGE);
-            // refresh tables to keep UI consistent
             populateDelHealth(catId);
             populateDelIncidents(catId);
             return;
         }
 
-        // success feedback and refresh
         String msg = "Deleted " + deletedHealth + " health comment(s), " + deletedIncidents + " incident(s).";
         JOptionPane.showMessageDialog(this, msg, "Deleted", JOptionPane.INFORMATION_MESSAGE);
         populateDelHealth(catId);
         populateDelIncidents(catId);
 
-        // refresh profile window so deletions are reflected
         try {
             updateParentProfile(catId);
         } catch (Throwable t) {
@@ -1683,7 +1642,6 @@ public class editCatMenu extends javax.swing.JFrame {
     private void addCaretakerBtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addCaretakerBtnActionPerformed
         Object selObj = catSelector.getSelectedItem();
         CatItem sel = (selObj instanceof CatItem) ? (CatItem) selObj : null;
-        // Try to use CaretakersCombo1 if present (fallback to CaretakersCombo)
         Object caretakersComboObj = null;
         try {
             caretakersComboObj = this.getClass().getDeclaredField("CaretakersCombo") != null ? CaretakersCombo.getSelectedItem() : null;
@@ -1708,7 +1666,6 @@ public class editCatMenu extends javax.swing.JFrame {
             int affected = ps.executeUpdate();
             if (affected > 0) {
                 JOptionPane.showMessageDialog(this, "Caretaker added to cat.", "Success", JOptionPane.INFORMATION_MESSAGE);
-                // Refresh both add/remove lists so UI stays consistent
                 loadAvailableCaretakersForCat(sel.id);
                 loadDelCaretakersForCat(sel.id);
                 updateParentProfile(sel.id);
@@ -1720,7 +1677,6 @@ public class editCatMenu extends javax.swing.JFrame {
             String msg = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
             if (msg.contains("duplicate") || msg.contains("unique") || msg.contains("constraint")) {
                 JOptionPane.showMessageDialog(this, "That caretaker is already associated with this cat.", "Info", JOptionPane.INFORMATION_MESSAGE);
-                // Keep UI consistent
                 loadAvailableCaretakersForCat(sel.id);
                 loadDelCaretakersForCat(sel.id);
             } else {
@@ -1746,45 +1702,37 @@ public class editCatMenu extends javax.swing.JFrame {
         }
         int catId = sel.id;
 
-        // Read status and notes
         String status = (statusComboBox.getSelectedItem() == null) ? "Other" : statusComboBox.getSelectedItem().toString();
         String notes = NotesAdoptionArea.getText();
         if (notes == null) {
             notes = "";
         }
-
-        // Only Adopted and Fostered require adopter info
+        
         boolean requiresAdopter = "Adopted".equalsIgnoreCase(status.trim()) || "Fostered".equalsIgnoreCase(status.trim());
 
-        // Option 1: selected existing adopter (ignored when not required)
         @SuppressWarnings("unchecked")
         javax.swing.JList<AdopterItem> adoptersList = (javax.swing.JList<AdopterItem>) (Object) ListofOldAdopters;
         AdopterItem selectedAdopter = (adoptersList.getSelectedValue() instanceof AdopterItem) ? adoptersList.getSelectedValue() : null;
 
-        // Option 2: manual name/contact (ignored when not required)
         String newName = NameAdopterField.getText() == null ? "" : NameAdopterField.getText().trim();
         String newContact = ContactAdopterField.getText() == null ? "" : ContactAdopterField.getText().trim();
 
-        // Validation only when required
         if (requiresAdopter) {
             if (selectedAdopter == null && newName.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Please either select an existing adopter or enter adopter's name.", "Validation", JOptionPane.WARNING_MESSAGE);
                 return;
             }
         } else {
-            // Not required -> ensure we won't insert or associate an adopter
             selectedAdopter = null;
             newName = "";
             newContact = "";
         }
 
-        // Determine adopter id to use (existing or newly inserted). Null when not required.
         Integer adopterIdToUse = null;
         if (requiresAdopter && selectedAdopter != null && selectedAdopter.id > 0) {
             adopterIdToUse = selectedAdopter.id;
         }
 
-        // Insert new adopter if needed (only when required and not selecting an existing one)
         if (requiresAdopter && adopterIdToUse == null) {
             String insertAdopterSql = "INSERT INTO adopter (name, contact_info) VALUES (?, ?)";
             try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(insertAdopterSql, Statement.RETURN_GENERATED_KEYS)) {
@@ -1806,7 +1754,6 @@ public class editCatMenu extends javax.swing.JFrame {
             }
         }
 
-        // Insert adoption_status record (adopter_id null when not required)
         String insertStatusSql = "INSERT INTO adoption_status (cat_id, status, changed_at, notes, adopter_id) VALUES (?, ?, NOW(), ?, ?)";
         try (Connection conn = dbconn.getConnection(); PreparedStatement ps = conn.prepareStatement(insertStatusSql)) {
             ps.setInt(1, catId);
@@ -1827,14 +1774,12 @@ public class editCatMenu extends javax.swing.JFrame {
             return;
         }
 
-        // Success: refresh adopter list and UI
         JOptionPane.showMessageDialog(this, "Adoption status saved.", "Success", JOptionPane.INFORMATION_MESSAGE);
         loadOldAdopters();
         if (adopterIdToUse != null) {
             selectAdopterInListById(adopterIdToUse);
         }
 
-        // Refresh other related UI and parent profile
         try {
             loadAvailableCaretakersForCat(catId);
             loadDelCaretakersForCat(catId);
@@ -1844,8 +1789,7 @@ public class editCatMenu extends javax.swing.JFrame {
         } catch (Throwable t) {
             logger.log(java.util.logging.Level.FINE, "Failed to refresh after saving adoption", t);
         }
-
-        // Clear adoption input areas and reset UI (run on EDT)
+        
         SwingUtilities.invokeLater(() -> {
             NameAdopterField.setText("");
             ContactAdopterField.setText("");
@@ -1857,7 +1801,6 @@ public class editCatMenu extends javax.swing.JFrame {
             javax.swing.JList<AdopterItem> adopterList = (javax.swing.JList<AdopterItem>) (Object) ListofOldAdopters;
             adopterList.clearSelection();
             NameAdopterField.requestFocusInWindow();
-            // Ensure UI reflects the new status selection
             updateAdopterInputsEnabled();
         });
     }//GEN-LAST:event_SaveAdoptionBtnActionPerformed
@@ -1972,7 +1915,6 @@ public class editCatMenu extends javax.swing.JFrame {
                 BehaviourArea.setText("");
                 OthernoteArea.setText("");
                 populateBehaviourTable(sel.id);
-                // ensure profile window refreshes to reflect new behaviour comment
                 try {
                     updateParentProfile(sel.id);
                 } catch (Throwable t) {

@@ -58,7 +58,6 @@ public class QRCodeService {
 
     private String buildPayload(int catId, String catName) {
         if (!baseUrl.isEmpty()) {
-            // Ensure a trailing slash only once
             String url = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
             return url + catId;
         }
@@ -78,9 +77,7 @@ public class QRCodeService {
         return MatrixToImageWriter.toBufferedImage(matrix);
     }
 
-    // Write using ImageIO for robustness and to avoid re-encoding BitMatrix conversions.
     private void writeImageToPathUsingImageIO(BufferedImage img, Path outPath) throws IOException {
-        // Ensure parent exists
         Path parent = outPath.getParent();
         if (parent != null && !Files.exists(parent)) {
             try {
@@ -89,7 +86,6 @@ public class QRCodeService {
             }
         }
 
-        // Write PNG (overwrites if present)
         ImageIO.write(img, "PNG", outPath.toFile());
     }
 
@@ -101,7 +97,6 @@ public class QRCodeService {
     }
 
     private Path detectDownloadsFolder() {
-        // heuristic: $HOME/Downloads, fall back to $HOME
         try {
             String userHome = System.getProperty("user.home");
             if (userHome != null && !userHome.isEmpty()) {
@@ -136,7 +131,6 @@ public class QRCodeService {
         });
     }
 
-    // Utility used by earlier code; kept for reference but not used by the ImageIO saving approach.
     @SuppressWarnings("unused")
     private BitMatrix convertToBitMatrix(BufferedImage img) {
         int w = img.getWidth();
@@ -145,7 +139,7 @@ public class QRCodeService {
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 int rgb = img.getRGB(x, y);
-                boolean black = (rgb & 0xFFFFFF) == 0; // crude test (assumes pure black/white)
+                boolean black = (rgb & 0xFFFFFF) == 0;
                 if (black) {
                     m.set(x, y);
                 }

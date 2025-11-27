@@ -76,7 +76,6 @@ public class adoptMenu extends javax.swing.JFrame {
         if (phone == null) {
             return false;
         }
-        // allow common separators but validate on digits count
         String digits = phone.replaceAll("\\D", "");
         return PHONE_PATTERN.matcher(digits).matches();
     }
@@ -163,7 +162,6 @@ public class adoptMenu extends javax.swing.JFrame {
             return;
         }
 
-        // Validate contact: must be a valid email or an 11-digit phone
         if (!isValidContact(adopterContact)) {
             JOptionPane.showMessageDialog(this,
                     "Please enter a valid contact: either a valid email address or an 11-digit phone number.",
@@ -198,7 +196,6 @@ public class adoptMenu extends javax.swing.JFrame {
                     }
                 }
 
-                // create adoption_status entry indicating a request (status 'Other' used for requests)
                 try (PreparedStatement ps2 = conn.prepareStatement(insertStatusSql)) {
                     ps2.setInt(1, sel.id);
                     ps2.setString(2, "Other");

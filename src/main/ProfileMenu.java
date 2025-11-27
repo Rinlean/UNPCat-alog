@@ -225,7 +225,6 @@ public class ProfileMenu extends javax.swing.JFrame {
             return;
         }
 
-        // convert to Strings for DB ops, then immediately clear char arrays
         final String oldPwd = new String(oldPwdChars);
         final String newPwd = new String(newPwdChars);
         Arrays.fill(oldPwdChars, '\0');

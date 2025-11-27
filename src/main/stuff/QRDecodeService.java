@@ -37,18 +37,15 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 
-public class QRstuff {
+public class QRDecodeService {
 
-    // Regex patterns to extract cat id (various common formats)
     private static final Pattern CAT_ID_EXACT = Pattern.compile("(?i)^\\s*cat_id\\s*=\\s*(\\d+)\\s*$");
     private static final Pattern CAT_ID_LOOSE = Pattern.compile("(?i).*\\bcat(?:_|-)?id\\b\\s*[:=]?\\s*(\\d+).*");
     private static final Pattern CAT_URL = Pattern.compile("(?i).*/cat/(\\d+).*");
     private static final Pattern GENERIC_ID = Pattern.compile("(?i).*\\b(?:id|cat)\\b\\s*[:=]?\\s*(\\d+).*");
 
-    // debounce time between identical decodes
     private static final long DEBOUNCE_MS = 800L;
 
-    // coarse limits for image resizing for better performance
     private static final int MAX_WIDTH = 1280;
     private static final int MAX_HEIGHT = 720;
 
@@ -66,7 +63,6 @@ public class QRstuff {
         return t;
     });
 
-    // Executor used to run asynchronous cleanup tasks (dispose) so callers don't have to
     private final ExecutorService cleanupExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "qr-cleanup");
         t.setDaemon(true);
@@ -78,23 +74,20 @@ public class QRstuff {
     private String lastDecoded = null;
     private long lastTimeMillis = 0L;
 
-    // Callbacks
-    private Consumer<String> decodedCallback;   // receives decoded text
-    private Consumer<Result> resultCallback;    // receives full ZXing Result (format + text)
-    private Consumer<Integer> catIdCallback;    // receives extracted cat id if present
-    private Consumer<String> statusCallback;    // receives human readable status messages
+    private Consumer<String> decodedCallback;
+    private Consumer<Result> resultCallback;
+    private Consumer<Integer> catIdCallback;
+    private Consumer<String> statusCallback;
 
-    // Behavior flags
     private volatile boolean autoOpenProfile = true;
 
-    // ZXing decode hints
     private final Map<DecodeHintType, Object> decodeHints;
 
-    public QRstuff() {
+    public QRDecodeService() {
         this(Webcam.getDefault());
     }
 
-    public QRstuff(Webcam webcam) {
+    public QRDecodeService(Webcam webcam) {
         if (webcam == null) {
             throw new IllegalStateException("No webcam available.");
         }
@@ -105,7 +98,6 @@ public class QRstuff {
         decodeHints.put(DecodeHintType.CHARACTER_SET, StandardCharsets.UTF_8.name());
         decodeHints.put(DecodeHintType.POSSIBLE_FORMATS, DEFAULT_FORMATS);
 
-        // choose a reasonable default view size if available
         try {
             if (webcam.getViewSizes() != null && webcam.getViewSizes().length > 0) {
                 webcam.setViewSize(webcam.getViewSizes()[0]);
@@ -189,9 +181,6 @@ public class QRstuff {
         parent.repaint();
     }
 
-    /**
-     * Start decoding loop in a background thread. Safe to call multiple times.
-     */
     public void startScanning() {
         if (running.compareAndSet(false, true)) {
             notifyStatus("Scanning...");
@@ -201,9 +190,6 @@ public class QRstuff {
         }
     }
 
-    /**
-     * Stop decoding loop.
-     */
     public void stopScanning() {
         running.set(false);
     }
@@ -220,14 +206,11 @@ public class QRstuff {
                     continue;
                 }
 
-                // prepare (downscale + contrast) to improve decode reliability/speed
                 BufferedImage prepared = prepareFrame(frame);
 
-                // try decode original and small rotations
                 Result result = tryDecodeWithRotations(reader, prepared);
                 if (result != null) {
                     handleDecodedResult(result);
-                    // debounce a bit after successful decode
                     Thread.sleep(Math.max(DEBOUNCE_MS, 300));
                 } else {
                     Thread.sleep(120);
@@ -237,7 +220,6 @@ public class QRstuff {
                 break;
             } catch (Throwable t) {
                 notifyStatus("Decoder loop error: " + t.getMessage());
-                // attempt to continue; camera may recover
                 try {
                     Thread.sleep(300);
                 } catch (InterruptedException ie) {
@@ -254,7 +236,6 @@ public class QRstuff {
         final String text = result.getText();
         final BarcodeFormat fmt = result.getBarcodeFormat();
 
-        // debounce identical reads
         long now = System.currentTimeMillis();
         boolean isNew = !text.equals(lastDecoded) || (now - lastTimeMillis) > DEBOUNCE_MS;
         if (!isNew) return;
@@ -263,7 +244,6 @@ public class QRstuff {
 
         notifyStatus("Decoded: " + text + " (" + fmt + ")");
 
-        // result callback (format + text)
         if (resultCallback != null) {
             try {
                 resultCallback.accept(result);
@@ -271,7 +251,6 @@ public class QRstuff {
             }
         }
 
-        // decoded text callback (backwards compat)
         if (decodedCallback != null) {
             try {
                 decodedCallback.accept(text);
@@ -279,7 +258,6 @@ public class QRstuff {
             }
         }
 
-        // attempt to extract cat id and call callback / possibly open profile
         Integer catId = extractCatId(text);
         if (catId != null) {
             if (catIdCallback != null) {
@@ -302,22 +280,16 @@ public class QRstuff {
         }
     }
 
-    /**
-     * Attempts to decode the provided image, trying the image directly and
-     * then a couple of rotated variants to improve robustness for different camera orientations.
-     */
     private Result tryDecodeWithRotations(MultiFormatReader reader, BufferedImage img) {
         try {
             LuminanceSource source = new BufferedImageLuminanceSource(img);
             BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
             return reader.decodeWithState(bitmap);
         } catch (NotFoundException ignored) {
-            // try rotations
         } catch (Throwable e) {
             return null;
         }
 
-        // rotate 90
         BufferedImage r90 = rotateImage(img, 90);
         if (r90 != null) {
             try {
@@ -329,7 +301,6 @@ public class QRstuff {
             }
         }
 
-        // rotate 270
         BufferedImage r270 = rotateImage(img, 270);
         if (r270 != null) {
             try {
@@ -344,10 +315,6 @@ public class QRstuff {
         return null;
     }
 
-    /**
-     * Downscale large images and apply a cheap contrast stretch to improve
-     * decode success on low-contrast webcam captures.
-     */
     private BufferedImage prepareFrame(BufferedImage src) {
         BufferedImage scaled = src;
         int w = src.getWidth();
@@ -423,9 +390,6 @@ public class QRstuff {
         return result;
     }
 
-    /**
-     * Attempts to extract a cat id from several known patterns. Returns null if none found.
-     */
     public static Integer extractCatId(String text) {
         if (text == null) return null;
         Matcher m = CAT_ID_EXACT.matcher(text);
@@ -533,7 +497,6 @@ public class QRstuff {
         });
     }
 
-    /** Convenience overload */
     public void submitCleanup() {
         submitCleanup(null);
     }

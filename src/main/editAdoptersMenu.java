@@ -15,10 +15,8 @@ public class editAdoptersMenu extends javax.swing.JFrame {
 
     public editAdoptersMenu() {
         initComponents();
-        // load adopters into the list
         loadAdopters();
 
-        // Wire selection listener
         listAdopters.addListSelectionListener(evt -> {
             if (!evt.getValueIsAdjusting()) {
                 Object sel = listAdopters.getSelectedValue();
@@ -27,7 +25,6 @@ public class editAdoptersMenu extends javax.swing.JFrame {
             }
         });
 
-        // Initially no selection: disable detail controls
         setDetailsEnabled(false);
     }
 
@@ -55,12 +52,10 @@ public class editAdoptersMenu extends javax.swing.JFrame {
                 model.addElement(new AdopterItem(0, "<Error loading adopters>", ""));
             }
 
-            // set model on EDT
             SwingUtilities.invokeLater(() -> {
                 @SuppressWarnings("unchecked")
                 javax.swing.JList<AdopterItem> lst = (javax.swing.JList<AdopterItem>) (Object) listAdopters;
                 lst.setModel(model);
-                // clear selection
                 lst.clearSelection();
             });
         });
@@ -81,7 +76,6 @@ public class editAdoptersMenu extends javax.swing.JFrame {
         nameLabel.setText(ct.name);
         contactLabel.setText(ct.contact == null ? "" : ct.contact);
 
-        // fill change panel fields with current values
         nameField.setText(ct.name);
         contactField.setText(ct.contact == null ? "" : ct.contact);
 
@@ -247,7 +241,6 @@ public class editAdoptersMenu extends javax.swing.JFrame {
         }
 
         JOptionPane.showMessageDialog(this, "Adopter updated.", "Success", JOptionPane.INFORMATION_MESSAGE);
-        // reload list and re-select
         loadAdopters();
         SwingUtilities.invokeLater(() -> selectAdopterInListById(selectedAdopterId));
     }//GEN-LAST:event_SaveBtnActionPerformed
@@ -299,7 +292,6 @@ public class editAdoptersMenu extends javax.swing.JFrame {
         }
 
         JOptionPane.showMessageDialog(this, "Adopter deleted.", "Success", JOptionPane.INFORMATION_MESSAGE);
-        // refresh list and clear selection
         loadAdopters();
         SwingUtilities.invokeLater(() -> onAdopterSelected(null));
     }//GEN-LAST:event_DeleteBtnActionPerformed

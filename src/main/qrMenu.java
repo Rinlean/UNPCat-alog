@@ -28,14 +28,14 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.plaf.FontUIResource;
 import javax.swing.SwingWorker;
-import main.stuff.QRstuff;
+import main.stuff.QRDecodeService;
 import main.stuff.dbconn;
 
 public class qrMenu extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(qrMenu.class.getName());
 
-    private QRstuff qrStuff;
+    private QRDecodeService qrStuff;
     private boolean darkMode = false;
     private Integer accountId = null;
 
@@ -78,7 +78,6 @@ public class qrMenu extends javax.swing.JFrame {
         this.accountId = accId;
         this.accountRole = role;
 
-        // Update UI elements
         SwingUtilities.invokeLater(() -> updateMenusForRole());
 
         if (this.accountId != null) {
@@ -125,7 +124,7 @@ public class qrMenu extends javax.swing.JFrame {
         new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
-                qrStuff = new QRstuff();
+                qrStuff = new QRDecodeService();
                 return null;
             }
 
@@ -159,7 +158,6 @@ public class qrMenu extends javax.swing.JFrame {
                         }
                     });
 
-                    // Update UI buttons to running state
                     SwingUtilities.invokeLater(() -> {
                         startButton.setEnabled(false);
                         stopButton.setEnabled(true);
@@ -185,7 +183,6 @@ public class qrMenu extends javax.swing.JFrame {
             }
         }.execute();
 
-        // Ensure QRStuff is disposed when the window closes
         if (windowListenerAdded.compareAndSet(false, true)) {
             addWindowListener(new WindowAdapter() {
                 @Override
@@ -217,7 +214,6 @@ public class qrMenu extends javax.swing.JFrame {
                             });
                         });
                     }
-                    // shutdown background executor used for non-QR tasks
                     backgroundExecutor.shutdown();
                     try {
                         if (!backgroundExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
@@ -494,7 +490,6 @@ public class qrMenu extends javax.swing.JFrame {
         }
 
         if (child == null) {
-            // Nothing to show (supplier handled its own UI), re-enable button
             SwingUtilities.invokeLater(() -> sourceButton.setEnabled(true));
             return;
         }
@@ -513,7 +508,6 @@ public class qrMenu extends javax.swing.JFrame {
 
         SwingUtilities.invokeLater(() -> {
             try {
-                // If the caller already set visibility, this is harmless; otherwise show it.
                 if (!child.isVisible()) {
                     child.setVisible(true);
                 }
@@ -552,7 +546,6 @@ public class qrMenu extends javax.swing.JFrame {
                 darkMode = false;
             }
 
-            // Update all open windows so the new L&F takes effect immediately
             for (Window w : Window.getWindows()) {
                 SwingUtilities.updateComponentTreeUI(w);
                 w.invalidate();
@@ -650,7 +643,6 @@ public class qrMenu extends javax.swing.JFrame {
 
     private void ADtestcatprofilemenuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ADtestcatprofilemenuActionPerformed
         openWindowAndDisableButton(ADtestcatprofilemenu, () -> {
-            // testMenu appears to be a static action that shows its own UI. Call it and return null.
             catProfileMenu.testMenu();
             return null;
         });
